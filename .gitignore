@@ -1,0 +1,55 @@
+# Private working notes — planning docs, daily notes, parking lot.
+# Deliberately not part of the product.
+notes/
+
+# .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.user
+*.suo
+*.userprefs
+*.dll
+*.pdb
+.vs/
+artifacts/
+TestResults/
+*.trx
+*.coverage
+coverage/
+*.received.*
+
+# EF Core / local data
+*.db
+*.db-shm
+*.db-wal
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+appsettings.Development.local.json
+appsettings.*.local.json
+*.pfx
+*.key
+
+# Editors
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Rider
+.idea/
+*.sln.iml
