@@ -3,8 +3,8 @@
 A system-agnostic character manager for tabletop RPGs.
 
 Players create characters and submit advancement requests — spend XP to raise a trait or
-acquire a power. A storyteller approves or rejects. Approved requests are applied
-asynchronously. The rules of any given game live in data, not code.
+acquire a power. Most are evaluated and applied automatically; the exceptional ones are
+routed to a storyteller. The rules of any given game live in data, not code.
 
 > **Status: in development.** Started September 2026. Not yet deployed.
 
@@ -22,13 +22,31 @@ out.
 
 | Role | Component | Responsibility |
 |---|---|---|
-| Decision | **Rules service** | Given a character, a proposed advancement and a ruleset version — is it legal, and what does it cost? Stateless. No database. |
-| Enforcement | **Core API** | Owns persistence and identity. Asks Rules, then applies or rejects. |
+| Decision | **Rules service** | Given a character, a proposed advancement and a ruleset version — is it legal, what does it cost, and does it need a human? Stateless. No database. |
+| Enforcement | **Core API** | Owns persistence and identity. Asks Rules, then applies or routes. |
 | Administration | **Admin portal** | Authors ruleset content and publishes versioned snapshots. |
 
 Every evaluation is stamped with the ruleset version that produced it, so a character
 advanced under v3 does not silently break when v4 is published — and "why was this
 allowed?" has an answer that can be replayed.
+
+## Approval is the exception, not the rule
+
+Waiting on a human to approve a single point of Strength would make this worse than a
+spreadsheet. So the worker applies routine advancement automatically, and storytellers
+see only two kinds of thing:
+
+- **Escalations.** Some definitions are gated — a rare or powerful ability that should not
+  be handed out casually. Whether something is gated is a property of the *ruleset*, so a
+  storyteller changes it by publishing a new version, not by anyone shipping code.
+- **Corrections.** When a sheet is wrong — a defect, a failed call, state left half-applied
+  — a storyteller or admin edits it directly.
+
+Correction is a **break-glass path**: it bypasses the rules engine, because it exists
+precisely for when the rules engine produced bad state. So every manual edit is audited with
+a required reason, and overrides are marked on the character's history as distinct from
+advancement earned through the pipeline. An unaudited break-glass path is indistinguishable
+from a storyteller quietly buffing a friend's character.
 
 ## Architecture
 
@@ -51,9 +69,9 @@ Angular SPA
 Three deployables. Service-to-service calls carry Entra ID app tokens; the same mechanism
 provides the Player / Storyteller / Admin roles for users.
 
-The worker **re-validates at apply time** rather than trusting the decision made at
-submission — between a player submitting a request and a storyteller approving it, the
-character may have changed.
+The worker **re-validates at apply time** rather than trusting the earlier decision — the
+character may have moved on since, and for an escalated request sitting in a storyteller's
+queue the gap is days, during which the ruleset itself may have been republished.
 
 ## Stack
 
