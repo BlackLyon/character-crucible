@@ -80,7 +80,41 @@ Bicep · Azure Container Apps · xUnit + Testcontainers
 
 ## Running locally
 
-Not yet. `docker compose up` will bring up Postgres once the scaffold lands.
+Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download) and Docker.
+
+```bash
+docker compose up -d --wait     # Postgres 17 on :5432
+dotnet build
+dotnet test
+```
+
+Then run any of the three services:
+
+```bash
+dotnet run --project src/CharacterCrucible.CoreApi
+dotnet run --project src/CharacterCrucible.Rules
+dotnet run --project src/CharacterCrucible.Worker
+```
+
+Each service exposes `/health`. The APIs expose OpenAPI at `/openapi/v1.json` in
+development.
+
+## Layout
+
+```
+src/
+  CharacterCrucible.CoreApi      Persistence, identity, enforcement. Modular monolith.
+  CharacterCrucible.Rules        Stateless policy evaluation. No database, by design.
+  CharacterCrucible.Worker       Applies advancement; re-validates before it does.
+  CharacterCrucible.Contracts    Types shared across the service boundary.
+tests/
+  CharacterCrucible.CoreApi.Tests
+  CharacterCrucible.Rules.Tests
+```
+
+The Core API's modules are folders, not projects — see
+[src/CharacterCrucible.CoreApi/Modules](src/CharacterCrucible.CoreApi/Modules/README.md)
+for the boundary rule and why it's enforced by a test rather than by assemblies.
 
 ## Scope
 

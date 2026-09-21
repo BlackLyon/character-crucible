@@ -1,0 +1,6 @@
+@CharacterCrucible.Rules_HostAddress = http://localhost:5212
+
+GET {{CharacterCrucible.Rules_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CharacterCrucible.Contracts/CharacterCrucible.Contracts.csproj" />
+    <Project Path="src/CharacterCrucible.CoreApi/CharacterCrucible.CoreApi.csproj" />
+    <Project Path="src/CharacterCrucible.Rules/CharacterCrucible.Rules.csproj" />
+    <Project Path="src/CharacterCrucible.Worker/CharacterCrucible.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CharacterCrucible.CoreApi.Tests/CharacterCrucible.CoreApi.Tests.csproj" />
+    <Project Path="tests/CharacterCrucible.Rules.Tests/CharacterCrucible.Rules.Tests.csproj" />
+  </Folder>
+</Solution>
