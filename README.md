@@ -8,6 +8,25 @@ routed to a storyteller. The rules of any given game live in data, not code.
 
 > **Status: in development.** Started September 2026. Not yet deployed.
 
+## A note on scale, before anything else
+
+**This is deliberately more architecture than the problem needs.**
+
+A character manager with a few dozen trait definitions runs perfectly well as one ASP.NET
+Core app against one Postgres database. No message bus, no second service, no distributed
+tracing. If this were a product, that is what it would be — and that is the right answer
+for the product.
+
+It is built this way to exercise a specific set of things end to end: service-to-service
+authentication with Entra ID, asynchronous processing with an outbox and idempotent
+handlers, distributed tracing across process boundaries, and infrastructure as code. None
+of those can be demonstrated without the moving parts that produce them.
+
+What the domain *did* earn is where the seams are. The rules engine is split where a
+policy decision point genuinely sits — a pure evaluator with no data access — rather than
+wherever a boundary could be cut. That part is a real design decision. The number of
+deployables is a teaching decision, and worth being honest about.
+
 ## Why it is shaped this way
 
 The interesting problem here is that **the rules are not the application**. Every table
