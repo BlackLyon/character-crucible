@@ -10,6 +10,7 @@ Local only — `notes/` is gitignored and holds the real decision record:
 | File | What it carries |
 |---|---|
 | `notes/architecture-decision.md` | Why the system is shaped this way, the alternatives rejected, the falsifiers |
+| `notes/domain-design.md` | **The source of truth for the domain.** What makes a character, the attribute and ability model, the schema shapes, and which design questions are still open |
 | `notes/eight-week-plan.md` | Week-by-week scope and what is deliberately out |
 | `notes/<latest date>.md` | Where work stopped and what starts next |
 | `notes/parking-lot.md` | Deferred ideas. New ones go here rather than into the plan |
