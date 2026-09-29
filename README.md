@@ -1,10 +1,16 @@
 # Character Crucible
 
-A system-agnostic character manager for tabletop RPGs.
+A character creation and advancement manager for tabletop RPGs.
 
 Players create characters and submit advancement requests — spend XP to raise a trait or
 acquire a power. Most are evaluated and applied automatically; the exceptional ones are
-routed to a storyteller. The rules of any given game live in data, not code.
+routed to a storyteller, who can also correct a sheet directly when something has gone
+wrong. The rules — what traits exist, what they cost, what gates them — are data rather
+than code, so a table's houserules and errata change by publishing a new ruleset version
+rather than by deploying.
+
+It runs a small original rule system, built for this project. It tracks what a character
+*is*, not what is happening to it in a session: no play state, no damage, no dice.
 
 > **Status: in development.** Started September 2026. Not yet deployed.
 
