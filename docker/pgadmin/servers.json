@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Character Crucible (local)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "charactercrucible",
+      "Username": "cc",
+      "SSLMode": "prefer",
+      "Comment": "Host is the compose service name, not localhost - pgAdmin connects over the Docker network, not from your machine."
+    }
+  }
+}
