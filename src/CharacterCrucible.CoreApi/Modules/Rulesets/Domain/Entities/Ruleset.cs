@@ -1,6 +1,6 @@
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
 
-namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain;
+namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
 public class Ruleset
 {
