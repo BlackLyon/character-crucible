@@ -12,6 +12,7 @@ Local only — `notes/` is gitignored and holds the real decision record:
 | `notes/architecture-decision.md` | Why the system is shaped this way, the alternatives rejected, the falsifiers |
 | `notes/domain-design.md` | **The domain's reasoning.** What makes a character, the attribute and ability model, resolution, and which design questions are still open |
 | `notes/domain/` | **Entity specifications**, one file per module — what to actually write. Start at its README for build order and the entity/value-object convention |
+| `notes/data-policy.md` | Deletion, retention and soft delete. Mostly open questions; read before adding a delete flag to anything |
 | `notes/eight-week-plan.md` | Week-by-week scope and what is deliberately out |
 | `notes/<latest date>.md` | Where work stopped and what starts next |
 | `notes/parking-lot.md` | Deferred ideas. New ones go here rather than into the plan |
