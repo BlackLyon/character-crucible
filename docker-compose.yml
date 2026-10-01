@@ -18,5 +18,28 @@ services:
       timeout: 3s
       retries: 10
 
+  # Developer tool, not part of the product. http://localhost:5050
+  # Unpinned tag deliberately: a local-only tool, never deployed.
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cc-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@charactercrucible.dev
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-localdev}
+      # Desktop mode: skips the login and master-password prompts for local work.
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmindata:/var/lib/pgadmin
+      # Pre-registers the local server so the connection is already there.
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
+  pgadmindata:
