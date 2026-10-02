@@ -1,0 +1,29 @@
+# Normalise line endings in the repository so they do not depend on each
+# contributor's core.autocrlf setting.
+#
+# Without this, a file written with LF and then re-saved by Visual Studio with
+# CRLF shows as modified in `git status` while `git diff` reports no change,
+# because diff normalises and status compares raw bytes.
+
+* text=auto
+
+# Source and config: LF in the repository, CRLF in the working copy on Windows.
+*.cs        text eol=crlf
+*.csproj    text eol=crlf
+*.slnx      text eol=crlf
+*.props     text eol=crlf
+*.json      text eol=crlf
+*.md        text eol=crlf
+
+# Files that must keep LF regardless of platform — these run inside Linux
+# containers, where CRLF breaks shebangs and shell parsing.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Binary: never normalise, never diff as text.
+*.png       binary
+*.jpg       binary
+*.ico       binary
+*.pdf       binary
