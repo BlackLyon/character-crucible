@@ -10,7 +10,7 @@ public class TraitDefinition(Guid rulesetVersionId, string key, string name, str
     public string Key { get; private set; } = key;
     public string Name { get; private set; } = name;
     public string Description { get; private set; } = description;
-    public  TraitCategory Category { get; private set; } = category;
+    public TraitCategory Category { get; private set; } = category;
     public string? DomainKey { get; private set; } = domainKey;
     public int MinValue { get; private set; } = minValue;
     public int MaxValue { get; private set; } = maxValue;
