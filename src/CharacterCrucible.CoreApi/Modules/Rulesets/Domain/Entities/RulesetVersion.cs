@@ -1,21 +1,20 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
-public class RulesetVersion(int majorVersion, int minorVersion, Guid rulesetId, RulesetVersionKind kind)
+public class RulesetVersion(int majorVersion, int minorVersion, Guid rulesetId, RulesetVersionKind releaseType)
 {
     public Guid Id { get; private set; }
     public Guid RulesetId { get; private set; } = rulesetId;
     public int MajorVersion { get; private set; } = majorVersion;
     public int MinorVersion { get; private set; } = minorVersion;
-    public RulesetVersionKind Kind { get; private set; } = kind;
+    public RulesetVersionKind ReleaseType { get; private set; } = releaseType;
     public string? ReleaseNotes { get; private set; }
-    public RulesetVersionStatus Status { get; private set; } = RulesetVersionStatus.Draft;
-    public string? RulesetName { get; private set; }
-    public string? Publisher { get; private set; }
-    public DateTimeOffset? PublishedDate { get; private set; }
-    public Guid? PublishedBy { get; private set; }
-    public string? PublishedContent { get; private set; }
+    public RulesetVersionStatus Status => Publication is null ? RulesetVersionStatus.Draft : RulesetVersionStatus.Published;
+    public PublicationRecord? Publication { get; private set; }
     private readonly List<DomainDefinition> _domainDefinitions = [];
     public IReadOnlyCollection<DomainDefinition> DomainDefinitions => _domainDefinitions.AsReadOnly();
     private readonly List<TraitDefinition> _traitDefinitions = [];
@@ -75,21 +74,28 @@ public class RulesetVersion(int majorVersion, int minorVersion, Guid rulesetId, 
         _archetypeDefinitions.Remove(archetypeDefinition);
     }
 
-    public void Publish(string publishedContent, Guid publishedBy, string rulesetName, string publisher)
-    {
-        EnsureDraft();
-        PublishedContent = publishedContent;
-        PublishedBy = publishedBy;
-        PublishedDate = DateTimeOffset.UtcNow;
-        Status = RulesetVersionStatus.Published;
-        Publisher = publisher;
-        RulesetName = rulesetName;
-    }
-
     public void UpdateReleaseNotes(string releaseNotes)
     {
         EnsureDraft();
         ReleaseNotes = releaseNotes;
+    }
+
+    public void Publish(string rulesetName, string publisher, DateTimeOffset publishedDate, Guid publishedBy, string publishedContent)
+    {
+        if (Status == RulesetVersionStatus.Published)
+        {
+            throw new InvalidOperationException("The version has already been published.");
+        }
+
+        // A published version is immutable, so a blank value here freezes into a snapshot
+        // nothing can correct afterwards.
+        ArgumentException.ThrowIfNullOrWhiteSpace(rulesetName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(publisher);
+        ArgumentException.ThrowIfNullOrWhiteSpace(publishedContent);
+
+        var contentHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(publishedContent)));
+
+        Publication = new PublicationRecord(rulesetName, publisher, publishedDate, publishedBy, publishedContent, contentHash);
     }
 
     private void EnsureDraft()

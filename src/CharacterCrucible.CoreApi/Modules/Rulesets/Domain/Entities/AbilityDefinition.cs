@@ -3,18 +3,39 @@ using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
-public class AbilityDefinition(Guid rulesetVersionId, string key, string name, string description, AbilityDefinitionKind kind, CostRule costRule, bool requiresApproval, IList<PrerequisiteGroup> prerequisiteGroups, int sortOrder, bool isAvailable)
+public class AbilityDefinition
 {
+    public AbilityDefinition(Guid rulesetVersionId, string key, string name, string description, AbilityDefinitionKind abilityType, CostRule costRule, bool requiresApproval, IList<PrerequisiteGroup> prerequisiteGroups, int sortOrder, bool isAvailable)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+
+        RulesetVersionId = rulesetVersionId;
+        Key = key;
+        Name = name;
+        Description = description;
+        AbilityType = abilityType;
+        CostRule = costRule;
+        RequiresApproval = requiresApproval;
+        PrerequisiteGroups = [.. prerequisiteGroups];
+        SortOrder = sortOrder;
+        IsAvailable = isAvailable;
+    }
+
+    /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>
+    private AbilityDefinition() { }
+
     public Guid Id { get; private set; }
-    public Guid RulesetVersionId { get; private set; } = rulesetVersionId;
-    public string Key { get; private set; } = key;
-    public string Name { get; private set; } = name;
-    public string Description { get; private set; } = description;
-    public AbilityDefinitionKind Kind { get; private set; } = kind;
-    public CostRule CostRule { get; private set; } = costRule;
-    public bool RequiresApproval { get; private set; } = requiresApproval;
-    private IList<PrerequisiteGroup> PrerequisiteGroups { get; set; } = [.. prerequisiteGroups];
+    public Guid RulesetVersionId { get; private set; }
+    public string Key { get; private set; } = null!;
+    public string Name { get; private set; } = null!;
+    public string Description { get; private set; } = null!;
+    public AbilityDefinitionKind AbilityType { get; private set; }
+    public CostRule CostRule { get; private set; } = null!;
+    public bool RequiresApproval { get; private set; }
+    private IList<PrerequisiteGroup> PrerequisiteGroups { get; set; } = [];
     public IReadOnlyList<PrerequisiteGroup> Prerequisites => PrerequisiteGroups.AsReadOnly();
-    public int SortOrder { get; private set; } = sortOrder;
-    public bool IsAvailable { get; private set; } = isAvailable;
+    public int SortOrder { get; private set; }
+    public bool IsAvailable { get; private set; }
 }

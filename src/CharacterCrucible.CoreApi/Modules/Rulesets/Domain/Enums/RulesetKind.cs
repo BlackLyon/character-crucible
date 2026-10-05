@@ -2,6 +2,6 @@
 
 public enum RulesetKind
 {
-    Original,
-    Homebrew,
+    Base,
+    Derived,
 }
