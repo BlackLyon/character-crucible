@@ -11,6 +11,9 @@
          dotnet host instead. Costs nothing: container images run `dotnet App.dll`. -->
     <UseAppHost>false</UseAppHost>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Run the .editorconfig code-style rules during build, not just in the IDE.
+         Without this, IDExxxx rules are IDE-only and a naming violation ships. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
 </Project>
