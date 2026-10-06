@@ -39,7 +39,8 @@ invalidation, no staleness budget. Those problems do not exist rather than being
 Trusting callers to leave published versions alone would make every future caller a risk.
 Instead:
 
-- **Definitions have no setters.** Values arrive through the constructor and never change.
+- **Definitions have no public setters.** Values arrive through the constructor; the setters are
+  private, and the complex collections are private settable properties because EF requires it.
   Editing a published definition would silently rewrite rules characters were already
   evaluated against.
 - **`RulesetVersion.AddDefinition` / `RemoveDefinition` call `EnsureDraft()`.** Mutating a
@@ -67,25 +68,45 @@ absent: it is a different dimension, since a system can be derived *and* officia
 
 | # | Invariant | Enforced by |
 |---|---|---|
-| 0 | `(RulesetId, MajorVersion, MinorVersion)` is unique | `Ruleset.CreateDraft`, plus a composite unique index |
+| 0 | `(RulesetId, MajorVersion, MinorVersion)` is unique | `Ruleset.CreateDraft`. A composite unique index is **planned, not yet written** — no EF configuration exists |
 | 1 | At most one `Draft` per ruleset | `Ruleset.CreateDraft` |
 | 2 | A published version has every stamp field set | **Structural** — `PublicationRecord` is all-or-nothing |
 | 3 | A published version never changes | `EnsureDraft()`, and no public setters |
-| 4 | `CurrentVersionId` points at a *published* version *of this ruleset* | `Ruleset.SetCurrentVersion` |
+| 4 | `CurrentVersion` is a *published* version *of this ruleset* | `Ruleset.SetCurrentVersion` |
 
 **Invariants 0, 1 and 4 belong on `Ruleset`** because it is the only type that can see its
 versions and its current pointer together. That is also why `SetCurrentVersion` takes a
 `RulesetVersion` and not a `Guid`: an id carries neither publication status nor ownership, so
 a method taking one *cannot* check the invariant.
 
+**And `Ruleset.CreateDraft` is the only way to create a version at all.** `RulesetVersion`'s
+creating constructor is `internal` and its parameterless one is `private`. Before that,
+invariants 0 and 1 were enforced *in* `CreateDraft` while `CreateDraft` itself was optional —
+`new RulesetVersion(...)` was public and went around both. `internal` is assembly-wide, so the
+seed routine is the place to watch; another module doing it is caught by the architecture test.
+
 **Ownership is checked by collection membership, not by comparing ids.** `Id` is
 `Guid.Empty` until EF assigns it on insert, so an id comparison is vacuously true before
 persistence — exactly the state a unit test is in.
 
+**`CurrentVersion` is a navigation for the same reason.** It was a bare `Guid?` and
+`SetCurrentVersion` copied `version.Id` by hand — which, before the row existed, wrote
+`Guid.Empty` into a **non-null** column. `HasValue` then said a version was in force while
+resolving to nothing, and with no navigation EF fixup could never repair it. Holding the object
+means no id is written by hand, so the bad state is unreachable rather than guarded.
+
+⚠️ **Publishing is therefore a two-phase save, and that is not optional.** With both rows new,
+one `SaveChanges` fails: the ruleset's FK needs the version to exist and the version's FK needs
+the ruleset to exist. Save the ruleset and its draft, then publish and promote. The cycle comes
+from the FK *constraint*, so keeping a bare `Guid?` and merely configuring it as an FK hits the
+same wall — the old design allowed a single-pass insert only because it had no constraint, which
+is the same reason nothing caught `Guid.Empty`.
+
 ⚠️ **An aggregate invariant is only as strong as the loaded graph.** A `Ruleset` loaded
 without `Include(r => r.Versions)` cannot see its own drafts, so invariant 1 silently passes.
 Any handler that calls `CreateDraft` or `SetCurrentVersion` must load the versions. The
-database indexes are the real backstop.
+database indexes are the intended backstop — **and they do not exist yet**, so for now the
+loaded graph is the only enforcement there is.
 
 ## `PublicationRecord` and the content hash
 
@@ -129,16 +150,37 @@ Each was established by running code against Postgres, not assumed:
    by reference. Do not assert that two structurally identical `PrerequisiteGroup` values are
    equal.
 
-Each entity also has a **private parameterless constructor** used only by EF. That is what
-lets the public constructor validate its arguments without those guards running on every row
-load, and it sidesteps constraint 1 for entities that take collections.
+Each entity also has a **private parameterless constructor** used only by EF. EF prefers it over
+the public one, so the validating constructor's guards do not run on every row load — rows were
+validated on the way in, and re-validating would make a legacy blank value unloadable. It also
+sidesteps constraint 1 for the three entities that take collection parameters.
 
-## Enum values that cross the snapshot boundary start at 1
+Two further things verified rather than assumed, both of which reduce the EF configuration still
+to be written:
 
-`TraitCategory`, `AbilityDefinitionKind`, `CostOp`, `CostOperand`, `PrerequisiteEntryKind` and
-`ArchetypeTargetKind` are serialised into `PublishedContent`, so their numeric values become
-part of a frozen document and must survive reordering. Enums that stay in columns —
-`RulesetKind`, `RulesetVersionKind`, `RulesetVersionStatus` — are left unnumbered.
+- **Navigation collections need no `HasField`.** `private readonly List<T> _versions` behind a
+  read-only `Versions` property is discovered by convention — the navigation from the property,
+  the backing field from its name, with `PreferField` access. No configuration at all.
+- **`IList<T>` and `List<T>` behave identically** for that discovery and materialisation. The
+  backing fields should still agree with each other for consistency, but nothing breaks.
+
+## Persisted enum values start at 1
+
+*Corrected 2026-10-05.* This rule previously read "enum values that cross the snapshot boundary",
+which was wrong in a way that misclassified a real case. **The criterion is whether the value is
+persisted at all**, not whether it reaches `PublishedContent` — a stored ordinal has to survive a
+member being reordered for exactly the same reason a serialised one does.
+
+So `TraitCategory`, `AbilityDefinitionKind`, `CostOp`, `CostOperand`, `PrerequisiteEntryKind` and
+`ArchetypeTargetKind` are numbered because they end up inside `PublishedContent`, **and
+`RulesetVersionKind` is numbered because `ReleaseType` is a stored column.** The old wording left
+it unnumbered, which also made `Errata` the zero value — so any path failing to set a release
+type would have read back as a legitimate "Errata" rather than an obvious sentinel.
+
+Starting at 1 is deliberate for that reason: `default(T)` is then not a valid member.
+
+Only `RulesetKind` and `RulesetVersionStatus` stay unnumbered, because both are **derived and
+never stored** — `Origin` and `Status` are computed properties with no column behind them.
 
 ## Enum-typed properties are never called `Kind`
 
