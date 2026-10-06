@@ -5,13 +5,25 @@ using System.Text;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
-public class RulesetVersion(int majorVersion, int minorVersion, Guid rulesetId, RulesetVersionKind releaseType)
+public class RulesetVersion
 {
+    private RulesetVersion() { }
+    internal RulesetVersion(int majorVersion, int minorVersion, RulesetVersionKind releaseType)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(majorVersion, nameof(majorVersion));
+        ArgumentOutOfRangeException.ThrowIfNegative(minorVersion, nameof(minorVersion));
+
+        MajorVersion = majorVersion;
+        MinorVersion = minorVersion;
+        ReleaseType = releaseType;
+    }
+
+
     public Guid Id { get; private set; }
-    public Guid RulesetId { get; private set; } = rulesetId;
-    public int MajorVersion { get; private set; } = majorVersion;
-    public int MinorVersion { get; private set; } = minorVersion;
-    public RulesetVersionKind ReleaseType { get; private set; } = releaseType;
+    public Guid RulesetId { get; private set; }
+    public int MajorVersion { get; private set; }
+    public int MinorVersion { get; private set; }
+    public RulesetVersionKind ReleaseType { get; private set; }
     public string? ReleaseNotes { get; private set; }
     public RulesetVersionStatus Status => Publication is null ? RulesetVersionStatus.Draft : RulesetVersionStatus.Published;
     public PublicationRecord? Publication { get; private set; }

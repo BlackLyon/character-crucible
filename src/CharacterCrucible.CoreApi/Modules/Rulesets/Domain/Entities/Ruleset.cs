@@ -25,7 +25,7 @@ public class Ruleset
     public string Publisher { get; private set; } = null!;
     public RulesetKind Origin => DerivedFrom is null ? RulesetKind.Base : RulesetKind.Derived;
     public Guid? DerivedFrom { get; private set; }
-    public Guid? CurrentVersionId { get; private set; }
+    public RulesetVersion? CurrentVersion { get; private set; }
     private readonly IList<RulesetVersion> _versions = [];
     public IReadOnlyCollection<RulesetVersion> Versions => _versions.AsReadOnly();
 
@@ -39,7 +39,7 @@ public class Ruleset
         {
             throw new InvalidOperationException("Only published versions can be set as the current version.");
         }
-        CurrentVersionId = version.Id;
+        CurrentVersion = version;
     }
 
     public RulesetVersion CreateDraft(int majorVersionNumber, int minorVersionNumber, RulesetVersionKind kind)
@@ -52,7 +52,7 @@ public class Ruleset
         if (_versions.Any(v => v.Status == RulesetVersionStatus.Draft))
             throw new InvalidOperationException("This ruleset already has an open draft.");
 
-        var draftVersion = new RulesetVersion(majorVersionNumber, minorVersionNumber, Id, kind);
+        var draftVersion = new RulesetVersion(majorVersionNumber, minorVersionNumber, kind);
         _versions.Add(draftVersion);
         return draftVersion;
     }
