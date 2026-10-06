@@ -22,6 +22,14 @@ indent_size = 2
 # C# files
 [*.cs]
 
+# IDE1006 must be set by diagnostic id, not only by dotnet_naming_rule severity: the
+# per-rule severity drives the IDE only, and setting it there alone does nothing in a
+# build. Directory.Build.props sets WarningsAsErrors=IDE1006, which is what makes this a
+# hard stop -- a warning alone would not keep a lowercase public property out of a
+# published snapshot, and no CI enforces -warnaserror. Catches lowercase positional
+# record parameters, which emit lowercase public properties and compile silently.
+dotnet_diagnostic.IDE1006.severity = warning
+
 #### Core EditorConfig Options ####
 
 # Indentation and spacing
@@ -217,7 +225,7 @@ dotnet_naming_rule.methods_should_be_pascalcase.severity = suggestion
 dotnet_naming_rule.methods_should_be_pascalcase.symbols = methods
 dotnet_naming_rule.methods_should_be_pascalcase.style = pascalcase
 
-dotnet_naming_rule.properties_should_be_pascalcase.severity = suggestion
+dotnet_naming_rule.properties_should_be_pascalcase.severity = warning
 dotnet_naming_rule.properties_should_be_pascalcase.symbols = properties
 dotnet_naming_rule.properties_should_be_pascalcase.style = pascalcase
 

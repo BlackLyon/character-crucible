@@ -19,4 +19,9 @@
     <ProjectReference Include="..\CharacterCrucible.Contracts\CharacterCrucible.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Modules\Characters\" />
+    <Folder Include="Modules\Advancement\" />
+  </ItemGroup>
+
 </Project>

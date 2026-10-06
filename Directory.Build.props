@@ -11,6 +11,13 @@
          dotnet host instead. Costs nothing: container images run `dotnet App.dll`. -->
     <UseAppHost>false</UseAppHost>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Run the .editorconfig code-style rules during build, not just in the IDE.
+         Without this, IDExxxx rules are IDE-only and a naming violation ships. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Arms the IDE1006 naming rule: a warning alone does not stop a lowercase public
+         property reaching a published snapshot, and no CI enforces -warnaserror. Scoped to
+         this one rule so an unused variable mid-refactor does not block the build. -->
+    <WarningsAsErrors>IDE1006</WarningsAsErrors>
   </PropertyGroup>
 
 </Project>
