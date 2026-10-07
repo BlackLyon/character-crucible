@@ -4,6 +4,17 @@ root = true
 [*]
 indent_style = space
 
+# Explicitly BOM-less, and set before these files exist. A BOM breaks a shebang: the kernel
+# does not recognise line 1, the parent shell runs it as a command and errors, then executes
+# the rest and exits 0 -- a CI step that looks green with its first line skipped. Same class
+# of problem for Dockerfile FROM and for YAML parsers. These are the eol=lf set in
+# .gitattributes: they run inside Linux containers.
+[*.{sh,yml,yaml,bicep,tf}]
+charset = utf-8
+
+[{Dockerfile,Dockerfile.*,.dockerignore,.gitattributes,.gitignore}]
+charset = utf-8
+
 # Xml files
 [*.xml]
 indent_size = 2
@@ -22,6 +33,9 @@ indent_size = 2
 # C# files
 [*.cs]
 
+# Visual Studio writes a BOM on save. Without this, every file written by another tool
+# produces a whole-file diff the first time VS touches it.
+charset = utf-8-bom
 # IDE1006 must be set by diagnostic id, not only by dotnet_naming_rule severity: the
 # per-rule severity drives the IDE only, and setting it there alone does nothing in a
 # build. Directory.Build.props sets WarningsAsErrors=IDE1006, which is what makes this a

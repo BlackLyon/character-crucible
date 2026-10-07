@@ -3,6 +3,7 @@ using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
+/// <summary>A binary thing: a perk or an ability. Held or not, gated by prerequisites.</summary>
 public class AbilityDefinition
 {
     public AbilityDefinition(Guid rulesetVersionId, string key, string name, string description, AbilityDefinitionKind abilityType, CostRule costRule, bool requiresApproval, IList<PrerequisiteGroup> prerequisiteGroups, int sortOrder, bool isAvailable)

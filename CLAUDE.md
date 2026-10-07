@@ -12,7 +12,8 @@ Local only — `notes/` is gitignored and holds the real decision record:
 | `notes/architecture-decision.md` | Why the system is shaped this way, the alternatives rejected, the falsifiers |
 | `notes/domain-design.md` | **The domain's reasoning.** What makes a character, the attribute and ability model, resolution, and which design questions are still open |
 | `notes/domain/` | **Entity specifications**, one file per module — what to actually write. Start at its README for build order and the entity/value-object convention |
-| `notes/eight-week-plan.md` | Week-by-week scope and what is deliberately out |
+| `notes/plan.md` | Staged scope, ordered by value, and what is deliberately out |
+| `notes/process-rulesets-module.md` | After-action from the first module, and the process changes that follow from it |
 | `notes/<latest date>.md` | Where work stopped and what starts next |
 | `notes/parking-lot.md` | Deferred ideas. New ones go here rather than into the plan |
 
@@ -38,6 +39,12 @@ restart the debate.
 
 - **Never push to `main`.** It is protected: PRs only, squash merge, linear history.
 - Commits and PR bodies say *why*, not just *what*.
+- **Comments are short and earn their place.** Two kinds only: a one- or two-line statement of
+  what a class or method is *for*, and a note on anything not intuitively clear from the code.
+  Nothing that restates the mechanism. **A twenty-line comment block does not get read**, so if
+  an explanation needs that much room it belongs in the module README or the commit message.
+  `GenerateDocumentationFile` is off, so `///` is IDE tooltips only — use it for the purpose
+  line on a type or member, plain `//` for an inline note.
 - Scope is a proof of concept. Breadth over depth — a lesson that turns out interesting goes
   in the parking lot, not into this week's work.
 

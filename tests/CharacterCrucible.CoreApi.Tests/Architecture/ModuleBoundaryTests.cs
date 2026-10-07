@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 using NetArchTest.Rules;
 
@@ -10,15 +10,8 @@ namespace CharacterCrucible.CoreApi.Tests.Architecture;
 /// src/CharacterCrucible.CoreApi/Modules/README.md.
 /// </summary>
 /// <remarks>
-/// What these tests CANNOT see, so green is not proof:
-/// <list type="bullet">
-/// <item>Transitive reaches. <c>HaveDependencyOn</c> is not transitive, so a type outside
-/// <c>Modules/</c> — a shared DbContext, say — may reference one module's internals while
-/// another module references that type. Neither module shows a dependency on the other.</item>
-/// <item><c>public const</c> values, which the compiler inlines, leaving no IL reference.</item>
-/// <item>Enum members cast to their underlying type, which compiles to a bare numeric load.</item>
-/// <item>Reflection and service-locator lookups by string.</item>
-/// </list>
+/// Green here is not proof — four kinds of boundary breach are invisible to it. See
+/// "What the architecture test cannot see" in Modules/README.md.
 /// </remarks>
 public class ModuleBoundaryTests
 {

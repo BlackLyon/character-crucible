@@ -5,9 +5,14 @@ using System.Text;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
+/// <summary>One state of a ruleset. Editable while draft, frozen once published.</summary>
 public class RulesetVersion
 {
+    /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>
     private RulesetVersion() { }
+
+    // internal, so Ruleset.CreateDraft is the only door: the one-draft and version-number
+    // invariants live there, and a public constructor would let callers skip them.
     internal RulesetVersion(int majorVersion, int minorVersion, RulesetVersionKind releaseType)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(majorVersion, nameof(majorVersion));
@@ -25,6 +30,7 @@ public class RulesetVersion
     public int MinorVersion { get; private set; }
     public RulesetVersionKind ReleaseType { get; private set; }
     public string? ReleaseNotes { get; private set; }
+    // Derived, not stored: published and "has a publication record" are one fact.
     public RulesetVersionStatus Status => Publication is null ? RulesetVersionStatus.Draft : RulesetVersionStatus.Published;
     public PublicationRecord? Publication { get; private set; }
     private readonly List<DomainDefinition> _domainDefinitions = [];
@@ -92,6 +98,7 @@ public class RulesetVersion
         ReleaseNotes = releaseNotes;
     }
 
+    /// <summary>Freezes the version. Irreversible, and cannot be called twice.</summary>
     public void Publish(string rulesetName, string publisher, DateTimeOffset publishedDate, Guid publishedBy, string publishedContent)
     {
         if (Status == RulesetVersionStatus.Published)
@@ -110,6 +117,7 @@ public class RulesetVersion
         Publication = new PublicationRecord(rulesetName, publisher, publishedDate, publishedBy, publishedContent, contentHash);
     }
 
+    /// <summary>Guards every mutator. A published version never changes.</summary>
     private void EnsureDraft()
     {
         if (Status == RulesetVersionStatus.Published)

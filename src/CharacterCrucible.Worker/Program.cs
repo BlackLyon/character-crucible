@@ -1,4 +1,4 @@
-using CharacterCrucible.Worker;
+﻿using CharacterCrucible.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHostedService<Worker>();

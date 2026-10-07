@@ -3,6 +3,7 @@ using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
+/// <summary>A rated thing: an attribute or a skill. A key with a numeric rating.</summary>
 public class TraitDefinition
 {
     public TraitDefinition(Guid rulesetVersionId, string key, string name, string description, TraitCategory category, string? domainKey, int minValue, int maxValue, CostRule costRule, int sortOrder, bool isAvailable)

@@ -2,6 +2,7 @@
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
+/// <summary>An archetype. Grants ranks, and overrides costs and caps.</summary>
 public class ArchetypeDefinition
 {
     public ArchetypeDefinition(Guid rulesetVersionId, string key, string name, string description, IList<GrantedRank> grantedRanks, IList<CostModifier> costModifiers, IList<CapModifier> capModifiers, int sortOrder, bool isAvailable)

@@ -1,4 +1,4 @@
-namespace CharacterCrucible.Worker;
+﻿namespace CharacterCrucible.Worker;
 
 /// <summary>
 /// Applies advancement requests.
