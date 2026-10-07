@@ -1,7 +1,17 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using CharacterCrucible.CoreApi.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+
+// snake_case rather than EF's PascalCase: Postgres folds unquoted identifiers, so PascalCase
+// means every hand-written query needs quoting. pgAdmin is in the compose file, so raw queries
+// will happen. Migrations are applied explicitly, never on startup.
+builder.Services.AddDbContext<CharacterCrucibleDbContext>(options => options
+    .UseNpgsql(builder.Configuration.GetConnectionString("CharacterCrucible"))
+    .UseSnakeCaseNamingConvention());
 
 var app = builder.Build();
 

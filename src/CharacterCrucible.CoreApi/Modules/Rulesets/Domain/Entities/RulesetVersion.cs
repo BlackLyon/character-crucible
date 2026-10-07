@@ -114,7 +114,7 @@ public class RulesetVersion
 
         var contentHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(publishedContent)));
 
-        Publication = new PublicationRecord(rulesetName, publisher, publishedDate, publishedBy, publishedContent, contentHash);
+        Publication = new PublicationRecord(rulesetName, publisher, publishedDate, publishedBy, publishedContent, contentHash, PublicationRecord.CurrentSchemaVersion);
     }
 
     /// <summary>Guards every mutator. A published version never changes.</summary>

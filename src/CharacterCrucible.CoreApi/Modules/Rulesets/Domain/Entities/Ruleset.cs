@@ -35,6 +35,7 @@ public class Ruleset
     // A navigation rather than a Guid: EF writes the FK, so no id is ever assigned by hand.
     // Assigning version.Id here would store Guid.Empty before the row exists.
     public RulesetVersion? CurrentVersion { get; private set; }
+    public Guid? CurrentVersionId { get; private set; }
 
     private readonly IList<RulesetVersion> _versions = [];
     public IReadOnlyCollection<RulesetVersion> Versions => _versions.AsReadOnly();
