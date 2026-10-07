@@ -1,4 +1,4 @@
-// The Rules service is a policy decision point: it answers whether an advancement is
+﻿// The Rules service is a policy decision point: it answers whether an advancement is
 // legal, what it costs, and whether it needs a human. It holds no data and owns no
 // database. If this service ever needs to read from Postgres, the boundary is wrong —
 // see notes/architecture-decision.md.

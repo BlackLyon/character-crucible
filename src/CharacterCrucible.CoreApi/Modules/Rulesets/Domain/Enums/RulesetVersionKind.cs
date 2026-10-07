@@ -1,8 +1,8 @@
-namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
+﻿namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
 
-// Numbered explicitly because ReleaseType is a stored column: a persisted ordinal has to
-// survive a member being reordered or inserted. Starting at 1 also means default(T) is not a
-// valid member, so an unset value is detectable rather than reading as a legitimate "Errata".
+/// <summary>What sort of release a version is.</summary>
+// Numbered: persisted as a column, so these must survive a member being reordered. Starting
+// at 1 also keeps default(T) from reading as a legitimate Errata.
 public enum RulesetVersionKind
 {
     Errata = 1,

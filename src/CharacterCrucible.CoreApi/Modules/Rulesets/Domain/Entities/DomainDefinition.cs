@@ -2,6 +2,7 @@
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
+/// <summary>A domain — Body, Mind, Spirit — and the bands its aggregate score falls into.</summary>
 public class DomainDefinition
 {
     public DomainDefinition(Guid rulesetVersionId, string key, string name, string description, IList<DomainBand> bandValues, int sortOrder)

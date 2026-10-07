@@ -24,9 +24,29 @@ erodes and tests do not. That test is
 
 It derives the module roster from the namespaces actually present, so a module added later is
 covered the day it gains its first type — a hardcoded list would leave it silently unchecked
-while the suite stayed green. Read the class remarks before trusting it: it is blind to
-transitive reaches through a shared type outside `Modules/`, to `const` inlining, to enum-to-int
-casts, and to reflection.
+while the suite stayed green.
+
+### What the architecture test cannot see
+
+Green is not proof. Four kinds of breach are invisible to it, all measured:
+
+- **Transitive reaches.** `HaveDependencyOn` is not transitive, so a type *outside* `Modules/`
+  — a shared `DbContext`, for instance — can reference one module's internals while another
+  module references that type. Neither module shows a dependency on the other. **This is the
+  realistic leak path for a modular monolith with one DbContext**, and closing it needs a
+  second rule: nothing outside `Modules/` may depend on any `Modules.*` internals.
+- **`public const` values**, which the compiler inlines, leaving no IL reference at all.
+- **Enum members cast to their underlying type** — `(int)SomeEnum.Value` compiles to a bare
+  numeric load with the type reference dropped. The nine enums are the most borrowable things
+  in the module.
+- **Reflection and service-locator lookups by string.** Unavoidable with any IL-based tool.
+
+`NetArchTest.Rules` 1.3.2 was published in 2021, so these will not be fixed upstream.
+`TngTech.ArchUnitNET` is the maintained alternative if that ever matters.
+
+**Also still to add:** a rule asserting `CharacterCrucible.Rules` has no dependency on
+`Npgsql`, `Microsoft.EntityFrameworkCore` or `System.Data` — the firmest invariant in
+`CLAUDE.md` is that the Rules service never reads a database, and nothing currently enforces it.
 
 ## Layout inside a module
 
