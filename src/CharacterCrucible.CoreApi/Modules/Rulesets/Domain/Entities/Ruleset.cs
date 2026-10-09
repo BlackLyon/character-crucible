@@ -1,4 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.StaticObjects;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 

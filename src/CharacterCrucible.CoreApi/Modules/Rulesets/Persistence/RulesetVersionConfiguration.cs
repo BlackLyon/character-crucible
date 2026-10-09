@@ -1,5 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
-using CharacterCrucible.CoreApi.Modules.Rulesets.Domain;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.StaticObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
