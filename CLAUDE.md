@@ -16,6 +16,7 @@ Local only — `notes/` is gitignored and holds the real decision record:
 | `notes/process-rulesets-module.md` | After-action from the first module, and the process changes that follow from it |
 | `notes/<latest date>.md` | Where work stopped and what starts next |
 | `notes/parking-lot.md` | Deferred ideas. New ones go here rather than into the plan |
+| `notes/dev-environment.md` | Machine- and toolchain-level traps that look like code faults. Read it before debugging a build or test failure that makes no sense |
 
 **Decisions in those files are settled.** If one comes up again, point at the recorded
 reasoning rather than reopening it — each significant decision carries a written falsifier,
