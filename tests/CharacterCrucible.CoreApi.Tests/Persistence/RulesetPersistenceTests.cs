@@ -2,6 +2,7 @@
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
 using Npgsql;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,7 +20,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
 
     /// <summary>
     /// A fixed instant with non-zero minutes and seconds, so a truncated or unmapped column
-    /// cannot pass by accident. Must be UTC: Npgsql rejects any other offset outright.
+    /// cannot pass by accident. Also the FakeTimeProvider clock in the publishing test.
     /// </summary>
     private static readonly DateTimeOffset PublishedAt =
         new(2026, 3, 1, 14, 37, 9, TimeSpan.Zero);
@@ -176,10 +177,9 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             db.Rulesets.Add(ruleset);
             await db.SaveChangesAsync();                       // phase 1
 
-            // A deliberately non-UTC offset. timestamptz stores an instant and discards
-            // the offset, so this comes back as +00:00 -- the test states that rather than
-            // leaving it unexercised. UtcNow would have made the assertion vacuous.
-            draft.Publish("Publish and promote", "Blacklyon", PublishedAt,
+            // The clock is pinned so PublishedDate can be asserted exactly. The other two
+            // publishing tests pass TimeProvider.System, which says they do not care when.
+            draft.Publish("Publish and promote", "Blacklyon", new FakeTimeProvider(PublishedAt),
                 Guid.CreateVersion7(), Snapshot);
             ruleset.SetCurrentVersion(draft);
             await db.SaveChangesAsync();                       // phase 2
@@ -205,9 +205,9 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             Assert.NotEqual(Guid.Empty, version.Publication.PublishedBy);
             Assert.Equal(PublicationRecord.CurrentSchemaVersion, version.Publication.SchemaVersion);
 
-            // Exact round-trip, which is also the only test of the timestamptz convention.
-            // Npgsql rejects a non-UTC offset rather than converting it, so Publish can accept
-            // a date that only fails at SaveChanges — see finding 18.
+            // Exact round-trip, and the only test of the timestamptz convention. Publish takes
+            // a TimeProvider rather than a date, so the non-UTC offset Npgsql rejects outright
+            // is now unrepresentable rather than merely unguarded.
             Assert.Equal(PublishedAt, version.Publication.PublishedDate);
 
             // The snapshot must come back byte-identical, because ContentHash is SHA-256 over
@@ -263,7 +263,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
         db.Rulesets.Add(ruleset);
         await db.SaveChangesAsync();
 
-        draft.Publish("Composite index", "Blacklyon", DateTimeOffset.UtcNow,
+        draft.Publish("Composite index", "Blacklyon", TimeProvider.System,
             Guid.CreateVersion7(), "{}");
         await db.SaveChangesAsync();
 
@@ -306,7 +306,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             db.Rulesets.Add(ruleset);
             await db.SaveChangesAsync();
 
-            first.Publish("Draft after publish", "Blacklyon", DateTimeOffset.UtcNow,
+            first.Publish("Draft after publish", "Blacklyon", TimeProvider.System,
                 Guid.CreateVersion7(), Snapshot);
             ruleset.SetCurrentVersion(first);
             await db.SaveChangesAsync();

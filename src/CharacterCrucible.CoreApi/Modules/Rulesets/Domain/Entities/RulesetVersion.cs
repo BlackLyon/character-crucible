@@ -99,7 +99,7 @@ public class RulesetVersion
     }
 
     /// <summary>Freezes the version. Irreversible, and cannot be called twice.</summary>
-    public void Publish(string rulesetName, string publisher, DateTimeOffset publishedDate, Guid publishedBy, string publishedContent)
+    public void Publish(string rulesetName, string publisher, TimeProvider timeProvider, Guid publishedBy, string publishedContent)
     {
         if (Status == RulesetVersionStatus.Published)
         {
@@ -111,8 +111,10 @@ public class RulesetVersion
         ArgumentException.ThrowIfNullOrWhiteSpace(rulesetName);
         ArgumentException.ThrowIfNullOrWhiteSpace(publisher);
         ArgumentException.ThrowIfNullOrWhiteSpace(publishedContent);
+        ArgumentNullException.ThrowIfNull(timeProvider);
 
         var contentHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(publishedContent)));
+        var publishedDate = timeProvider.GetUtcNow();
 
         Publication = new PublicationRecord(rulesetName, publisher, publishedDate, publishedBy, publishedContent, contentHash, PublicationRecord.CurrentSchemaVersion);
     }
