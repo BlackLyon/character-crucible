@@ -40,6 +40,42 @@ services:
       postgres:
         condition: service_healthy
 
+
+  # Runs the test suite inside Linux. Windows Smart App Control blocks freshly built assemblies
+  # on this machine, which presents as a test-host crash rather than a test failure -- so this is
+  # the verification run that cannot be blocked. See notes/dev-environment.md.
+  #
+  #   docker compose run --rm tests
+  #   docker compose run --rm tests dotnet test --filter FullyQualifiedName~FieldLength
+  #
+  # Behind a profile, so `docker compose up` does not start it.
+  #
+  # No depends_on: the integration tests start their own throwaway Postgres through
+  # Testcontainers. The postgres service above is for running the app, not the tests.
+  tests:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    profiles: ["test"]
+    working_dir: /src
+    environment:
+      # Testcontainers starts Postgres as a SIBLING container, so the port it publishes is on the
+      # host. Without this override the connection string comes back as "localhost", which in
+      # here means this container, and every integration test fails to connect.
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/src
+      # The daemon socket, so Testcontainers can start that Postgres at all.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Named volumes rather than paths under /src: Linux build output must not collide with the
+      # Windows obj/ and bin/ in the mounted tree, whose project.assets.json holds Windows paths.
+      # They also make a second run fast instead of restoring from scratch.
+      - testartifacts:/artifacts
+      - testnuget:/root/.nuget/packages
+    command: ["dotnet", "test", "--artifacts-path", "/artifacts"]
+
 volumes:
   pgdata:
   pgadmindata:
+  testartifacts:
+  testnuget:
