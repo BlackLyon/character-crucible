@@ -1,4 +1,5 @@
-﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
+﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Constants;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 
@@ -10,6 +11,8 @@ public class Ruleset
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
         ArgumentException.ThrowIfNullOrWhiteSpace(publisher);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, FieldLengths.Name, nameof(name));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(publisher.Length, FieldLengths.Publisher, nameof(publisher));
 
         Name = name;
         Description = description;
@@ -35,6 +38,7 @@ public class Ruleset
     // A navigation rather than a Guid: EF writes the FK, so no id is ever assigned by hand.
     // Assigning version.Id here would store Guid.Empty before the row exists.
     public RulesetVersion? CurrentVersion { get; private set; }
+    public Guid? CurrentVersionId { get; private set; }
 
     private readonly IList<RulesetVersion> _versions = [];
     public IReadOnlyCollection<RulesetVersion> Versions => _versions.AsReadOnly();

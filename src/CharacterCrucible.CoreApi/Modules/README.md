@@ -31,10 +31,15 @@ while the suite stayed green.
 Green is not proof. Four kinds of breach are invisible to it, all measured:
 
 - **Transitive reaches.** `HaveDependencyOn` is not transitive, so a type *outside* `Modules/`
-  — a shared `DbContext`, for instance — can reference one module's internals while another
+  — the shared `DbContext`, for instance — can reference one module's internals while another
   module references that type. Neither module shows a dependency on the other. **This is the
-  realistic leak path for a modular monolith with one DbContext**, and closing it needs a
-  second rule: nothing outside `Modules/` may depend on any `Modules.*` internals.
+  realistic leak path for a modular monolith with one DbContext.**
+
+  Closing it needs a second rule, and the obvious phrasing is wrong: *"nothing outside
+  `Modules/` may depend on `Modules.*`"* is **unsatisfiable**, because the `DbContext` has to
+  reference every module's entities to map them. The rule has to be **no module may depend on
+  another module, and only the persistence layer may depend on all of them** — which means the
+  test needs an explicit allow-list of one namespace rather than a blanket prohibition.
 - **`public const` values**, which the compiler inlines, leaving no IL reference at all.
 - **Enum members cast to their underlying type** — `(int)SomeEnum.Value` compiles to a bare
   numeric load with the type reference dropped. The nine enums are the most borrowable things

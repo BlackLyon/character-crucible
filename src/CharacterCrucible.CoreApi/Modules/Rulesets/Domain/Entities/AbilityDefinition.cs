@@ -1,4 +1,5 @@
-﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
+﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Constants;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
@@ -11,6 +12,8 @@ public class AbilityDefinition
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(key.Length, FieldLengths.Key, nameof(key));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, FieldLengths.Name, nameof(name));
 
         RulesetVersionId = rulesetVersionId;
         Key = key;
