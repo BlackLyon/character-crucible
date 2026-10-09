@@ -123,6 +123,17 @@ app starts fine and then fails on the first query with `relation ... does not ex
 The integration tests apply migrations themselves against a throwaway Postgres, so `dotnet test`
 does not depend on the step above.
 
+The suite also runs inside Linux, which needs only Docker — no local SDK, and no dependence on
+whatever SDK version happens to be installed:
+
+```bash
+docker compose run --rm tests
+```
+
+Roughly nine seconds on a warm run, Testcontainers Postgres included. It is behind a `test`
+profile, so `docker compose up` does not start it. Build output and the NuGet cache live in named
+volumes, so they never collide with the `obj/` and `bin/` of a host build.
+
 Then run any of the three services:
 
 ```bash
