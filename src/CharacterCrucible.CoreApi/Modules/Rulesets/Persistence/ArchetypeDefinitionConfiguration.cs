@@ -1,4 +1,4 @@
-using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -22,11 +22,14 @@ public class ArchetypeDefinitionConfiguration : IEntityTypeConfiguration<Archety
 
         builder.HasIndex(a => new { a.RulesetVersionId, a.Key }).IsUnique();
 
-        // Three jsonb collections. Mapped members are the private ILists named in the
-        // spec; the public read-only views are ignored.
-        builder.ComplexCollection<IList<GrantedRank>, GrantedRank>("Ranks").ToJson();
-        builder.ComplexCollection<IList<CostModifier>, CostModifier>("Modifiers").ToJson();
-        builder.ComplexCollection<IList<CapModifier>, CapModifier>("Caps").ToJson();
+        // Three jsonb collections. The mapped members are the private ILists the spec names,
+        // but the COLUMN is named after the public property: "modifiers" beside "caps" would put
+        // CostModifier in a column called modifiers and CapModifier in one called caps, and both
+        // are modifiers. ToJson takes the column name, so the private name need not leak.
+        // The public read-only views are ignored.
+        builder.ComplexCollection<IList<GrantedRank>, GrantedRank>("Ranks").ToJson("granted_ranks");
+        builder.ComplexCollection<IList<CostModifier>, CostModifier>("Modifiers").ToJson("cost_modifiers");
+        builder.ComplexCollection<IList<CapModifier>, CapModifier>("Caps").ToJson("cap_modifiers");
         builder.Ignore(a => a.GrantedRanks);
         builder.Ignore(a => a.CostModifiers);
         builder.Ignore(a => a.CapModifiers);

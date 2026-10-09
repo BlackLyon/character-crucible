@@ -1,4 +1,4 @@
-using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -27,16 +27,12 @@ public class AbilityDefinitionConfiguration : IEntityTypeConfiguration<AbilityDe
         builder.ComplexProperty(a => a.CostRule);
 
         // A complex collection nested inside a complex collection: prerequisite groups, each
-        // holding entries. ToJson has to go inside the lambda — the action overload returns the
-        // entity builder, not the collection builder, so chaining it outside does not compile.
-        builder.ComplexCollection<IList<PrerequisiteGroup>, PrerequisiteGroup>(
-            "PrerequisiteGroups",
-            group =>
-            {
-                group.ToJson();
-                group.ComplexCollection<IList<PrerequisiteEntry>, PrerequisiteEntry>("EntryValues");
-                group.Ignore(nameof(PrerequisiteGroup.Entries));
-            });
+        // holding entries. Both go into the one jsonb document.
+        var groups = builder.ComplexCollection<IList<PrerequisiteGroup>, PrerequisiteGroup>(
+            "PrerequisiteGroups");
+        groups.ToJson("prerequisites");
+        groups.ComplexCollection<IList<PrerequisiteEntry>, PrerequisiteEntry>("EntryValues");
+        groups.Ignore(g => g.Entries);
 
         builder.Ignore(a => a.Prerequisites);
     }

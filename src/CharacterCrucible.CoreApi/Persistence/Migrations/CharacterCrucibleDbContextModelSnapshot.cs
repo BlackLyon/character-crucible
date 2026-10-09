@@ -103,7 +103,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                                 });
 
                             b1
-                                .ToJson("prerequisite_groups")
+                                .ToJson("prerequisites")
                                 .HasColumnType("jsonb");
                         });
 
@@ -163,7 +163,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                                 .IsRequired();
 
                             b1
-                                .ToJson("caps")
+                                .ToJson("cap_modifiers")
                                 .HasColumnType("jsonb");
                         });
 
@@ -179,7 +179,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                             b1.Property<int>("TargetKind");
 
                             b1
-                                .ToJson("modifiers")
+                                .ToJson("cost_modifiers")
                                 .HasColumnType("jsonb");
                         });
 
@@ -193,7 +193,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                                 .IsRequired();
 
                             b1
-                                .ToJson("ranks")
+                                .ToJson("granted_ranks")
                                 .HasColumnType("jsonb");
                         });
 
@@ -249,7 +249,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                             b1.Property<int>("MinimumScore");
 
                             b1
-                                .ToJson("band_values")
+                                .ToJson("bands")
                                 .HasColumnType("jsonb");
                         });
 
@@ -301,6 +301,9 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                     b.HasIndex("CurrentVersionId")
                         .HasDatabaseName("ix_ruleset_current_version_id");
 
+                    b.HasIndex("DerivedFrom")
+                        .HasDatabaseName("ix_ruleset_derived_from");
+
                     b.ToTable("ruleset", "rulesets");
                 });
 
@@ -345,7 +348,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
 
                             b1.Property<string>("PublishedContent")
                                 .IsRequired()
-                                .HasColumnType("jsonb")
+                                .HasColumnType("text")
                                 .HasColumnName("publication_published_content");
 
                             b1.Property<DateTimeOffset>("PublishedDate")
@@ -381,7 +384,10 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_ruleset_version_ruleset_id_major_minor");
 
-                    b.ToTable("ruleset_version", "rulesets");
+                    b.ToTable("ruleset_version", "rulesets", t =>
+                        {
+                            t.HasCheckConstraint("ck_ruleset_version_publication_all_or_nothing", "num_nulls(publication_ruleset_name, publication_publisher, publication_published_date, publication_published_by, publication_published_content, publication_content_hash, publication_schema_version) IN (0, 7)");
+                        });
                 });
 
             modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.TraitDefinition", b =>
@@ -502,6 +508,12 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_ruleset_ruleset_versions_current_version_id");
 
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.Ruleset", null)
+                        .WithMany()
+                        .HasForeignKey("DerivedFrom")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_ruleset_ruleset_derived_from");
+
                     b.Navigation("CurrentVersion");
                 });
 
@@ -510,7 +522,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                     b.HasOne("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.Ruleset", null)
                         .WithMany("Versions")
                         .HasForeignKey("RulesetId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_ruleset_version_ruleset_ruleset_id");
                 });

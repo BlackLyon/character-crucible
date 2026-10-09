@@ -1,4 +1,4 @@
-using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

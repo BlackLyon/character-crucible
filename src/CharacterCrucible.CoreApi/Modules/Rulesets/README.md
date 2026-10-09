@@ -104,14 +104,32 @@ is the same reason nothing caught `Guid.Empty`.
 
 ⚠️ **An aggregate invariant is only as strong as the loaded graph.** A `Ruleset` loaded
 without `Include(r => r.Versions)` cannot see its own drafts, so invariant 1 silently passes.
-Any handler that calls `CreateDraft` or `SetCurrentVersion` must load the versions. The
-database indexes are the intended backstop — **and they do not exist yet**, so for now the
-loaded graph is the only enforcement there is.
+Any handler that calls `CreateDraft` or `SetCurrentVersion` should still load the versions, for
+a readable error rather than a constraint violation.
+
+**The database is the real backstop, and it exists.** `ux_ruleset_version_one_draft_per_ruleset`
+is a partial unique index — `UNIQUE (ruleset_id) WHERE publication_schema_version IS NULL` — so
+a second draft is rejected even on the path that goes around `CreateDraft` entirely. Tested both
+ways: it rejects a second draft inserted by raw SQL, and it permits a new draft alongside a
+published version. That second test is the one that matters — without it, deleting the `WHERE`
+clause would leave every other test green while making multi-version rulesets impossible.
+
+**Invariant 4 has no such backstop.** The FK proves `current_version_id` names *some* version;
+nothing below `SetCurrentVersion` proves it is published or belongs to this ruleset. One `UPDATE`
+can point a ruleset at another ruleset's draft. The *"of this ruleset"* half is reachable with a
+composite FK; the *"is published"* half is not, while `Status` is derived.
 
 ## `PublicationRecord` and the content hash
 
-The five publish-stamp fields are one value object rather than five nullable columns, so
-invariant 2 is unbreakable: either the record is absent (draft) or every field is present.
+The publish stamp is one value object of **seven** fields rather than seven nullable columns, so
+invariant 2 holds: either the record is absent (draft) or every field is present.
+
+**But that guarantee is the `CHECK` constraint, not the type.** `PublicationRecord`'s constructor
+cannot build a partial one — and EF still maps it to seven *independent nullable* columns,
+because "absent" can only be expressed as all of them being NULL. So the C# guarantee stops at
+the boundary. `ck_ruleset_version_publication_all_or_nothing` re-imposes it below:
+`num_nulls(…seven…) IN (0, 7)`. Without it, EF and the one-draft index disagreed about what a
+draft is — EF decides from `content_hash`, the index filters on `schema_version`.
 
 It carries a **SHA-256 `ContentHash`** over `PublishedContent`, computed inside `Publish()`
 and never accepted from a caller. Replayability is the central argument for the Rules service
@@ -121,6 +139,15 @@ a false record. The hash turns that from undetectable into one assertion.
 
 `GetHashCode()` is **not** usable for this: string hashing is randomised per process, so a
 value stored today cannot be compared tomorrow.
+
+⚠️ **Which is why `PublishedContent` is `text` and not `jsonb`.** `jsonb` stores a *parsed
+document* and re-serialises on read, so `{"traits":[]}` comes back as `{"traits": []}` — one
+space, a different hash, and the integrity check could never pass again. It also reorders keys
+and **discards duplicates**, which is data loss in a column the design calls immutable. Mapped
+as `jsonb` the hash was permanently wrong, and the test asserting only
+`ContentHash.Length == 64` could not catch it. The test now recomputes SHA-256 from what the
+database returned, and fails if the column type ever changes back. Validating that the content
+is JSON belongs in `Publish`, not in the column type.
 
 ## Entities and value objects
 

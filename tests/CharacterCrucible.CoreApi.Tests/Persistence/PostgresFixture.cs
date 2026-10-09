@@ -1,4 +1,4 @@
-using CharacterCrucible.CoreApi.Persistence;
+﻿using CharacterCrucible.CoreApi.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 
@@ -14,9 +14,10 @@ namespace CharacterCrucible.CoreApi.Tests.Persistence;
 /// </remarks>
 public sealed class PostgresFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
-        .Build();
+    /// <summary>Keep in step with the postgres service in docker-compose.yml.</summary>
+    private const string Image = "postgres:17-alpine";
+
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder(Image).Build();
 
     public string ConnectionString => _container.GetConnectionString();
 

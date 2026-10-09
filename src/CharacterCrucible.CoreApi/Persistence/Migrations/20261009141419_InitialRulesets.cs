@@ -31,7 +31,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                     cost_rule_factor = table.Column<int>(type: "integer", nullable: false),
                     cost_rule_op = table.Column<int>(type: "integer", nullable: false),
                     cost_rule_operand = table.Column<int>(type: "integer", nullable: false),
-                    prerequisite_groups = table.Column<string>(type: "jsonb", nullable: false)
+                    prerequisites = table.Column<string>(type: "jsonb", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -50,9 +50,9 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                     description = table.Column<string>(type: "text", nullable: false),
                     sort_order = table.Column<int>(type: "integer", nullable: false),
                     is_available = table.Column<bool>(type: "boolean", nullable: false),
-                    caps = table.Column<string>(type: "jsonb", nullable: false),
-                    modifiers = table.Column<string>(type: "jsonb", nullable: false),
-                    ranks = table.Column<string>(type: "jsonb", nullable: false)
+                    cap_modifiers = table.Column<string>(type: "jsonb", nullable: false),
+                    cost_modifiers = table.Column<string>(type: "jsonb", nullable: false),
+                    granted_ranks = table.Column<string>(type: "jsonb", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -70,7 +70,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                     name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     description = table.Column<string>(type: "text", nullable: false),
                     sort_order = table.Column<int>(type: "integer", nullable: false),
-                    band_values = table.Column<string>(type: "jsonb", nullable: false)
+                    bands = table.Column<string>(type: "jsonb", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -92,6 +92,13 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_ruleset", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_ruleset_ruleset_derived_from",
+                        column: x => x.derived_from,
+                        principalSchema: "rulesets",
+                        principalTable: "ruleset",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -107,7 +114,7 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                     release_notes = table.Column<string>(type: "text", nullable: true),
                     publication_content_hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     publication_published_by = table.Column<Guid>(type: "uuid", nullable: true),
-                    publication_published_content = table.Column<string>(type: "jsonb", nullable: true),
+                    publication_published_content = table.Column<string>(type: "text", nullable: true),
                     publication_published_date = table.Column<DateTimeOffset>(type: "timestamptz", nullable: true),
                     publication_publisher = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     publication_ruleset_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
@@ -116,13 +123,14 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_ruleset_version", x => x.id);
+                    table.CheckConstraint("ck_ruleset_version_publication_all_or_nothing", "num_nulls(publication_ruleset_name, publication_publisher, publication_published_date, publication_published_by, publication_published_content, publication_content_hash, publication_schema_version) IN (0, 7)");
                     table.ForeignKey(
                         name: "fk_ruleset_version_ruleset_ruleset_id",
                         column: x => x.ruleset_id,
                         principalSchema: "rulesets",
                         principalTable: "ruleset",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -183,6 +191,12 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                 schema: "rulesets",
                 table: "ruleset",
                 column: "current_version_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_ruleset_derived_from",
+                schema: "rulesets",
+                table: "ruleset",
+                column: "derived_from");
 
             migrationBuilder.CreateIndex(
                 name: "ix_ruleset_version_ruleset_id_major_minor",

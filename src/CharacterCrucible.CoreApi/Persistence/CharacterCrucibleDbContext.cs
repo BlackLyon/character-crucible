@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 

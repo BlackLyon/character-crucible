@@ -109,9 +109,19 @@ Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download) and Docker.
 
 ```bash
 docker compose up -d --wait     # Postgres 17 on :5432
+dotnet tool restore             # pins dotnet-ef to the EF Core version in use
 dotnet build
+dotnet dotnet-ef database update --project src/CharacterCrucible.CoreApi
 dotnet test
 ```
+
+**Migrations are applied explicitly, never on startup.** Auto-migrating races when more than one
+instance starts, and applies schema changes nobody reviewed. If the schema is behind the code the
+app starts fine and then fails on the first query with `relation ... does not exist` — so
+`/health/ready` checks for pending migrations rather than mere connectivity.
+
+The integration tests apply migrations themselves against a throwaway Postgres, so `dotnet test`
+does not depend on the step above.
 
 Then run any of the three services:
 

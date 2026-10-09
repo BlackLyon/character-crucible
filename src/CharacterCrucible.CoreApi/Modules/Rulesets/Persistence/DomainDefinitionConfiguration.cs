@@ -1,4 +1,4 @@
-using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -24,7 +24,7 @@ public class DomainDefinitionConfiguration : IEntityTypeConfiguration<DomainDefi
         // jsonb. The mapped member is the private IList; the public read-only view has to
         // be ignored or EF tries to map it too. The string overload is required: the
         // single-generic form binds to the primitive-collection overload and fails.
-        builder.ComplexCollection<IList<DomainBand>, DomainBand>("BandValues").ToJson();
+        builder.ComplexCollection<IList<DomainBand>, DomainBand>("BandValues").ToJson("bands");
         builder.Ignore(d => d.Bands);
     }
 }
