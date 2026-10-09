@@ -68,11 +68,11 @@ absent: it is a different dimension, since a system can be derived *and* officia
 
 | # | Invariant | Enforced by |
 |---|---|---|
-| 0 | `(RulesetId, MajorVersion, MinorVersion)` is unique | `Ruleset.CreateDraft`. A composite unique index is **planned, not yet written** — no EF configuration exists |
-| 1 | At most one `Draft` per ruleset | `Ruleset.CreateDraft` |
-| 2 | A published version has every stamp field set | **Structural** — `PublicationRecord` is all-or-nothing |
-| 3 | A published version never changes | `EnsureDraft()`, and no public setters |
-| 4 | `CurrentVersion` is a *published* version *of this ruleset* | `Ruleset.SetCurrentVersion` |
+| 0 | `(RulesetId, MajorVersion, MinorVersion)` is unique | `Ruleset.CreateDraft`, and a composite unique index `ix_ruleset_version_ruleset_id_major_minor` |
+| 1 | At most one `Draft` per ruleset | `Ruleset.CreateDraft`, and a **partial** unique index `ux_ruleset_version_one_draft_per_ruleset` filtered on `publication_schema_version IS NULL` |
+| 2 | A published version has every stamp field set | A `CHECK` constraint, `num_nulls(...) IN (0, 7)` — **not** structural, see below |
+| 3 | A published version never changes | `EnsureDraft()` on all nine mutators, and no public setters. **Deletion is not covered** — see the gaps below |
+| 4 | `CurrentVersion` is a *published* version *of this ruleset* | `Ruleset.SetCurrentVersion` only. No database backstop: a `CHECK` cannot hold a subquery |
 
 **Invariants 0, 1 and 4 belong on `Ruleset`** because it is the only type that can see its
 versions and its current pointer together. That is also why `SetCurrentVersion` takes a
@@ -118,6 +118,25 @@ clause would leave every other test green while making multi-version rulesets im
 nothing below `SetCurrentVersion` proves it is published or belongs to this ruleset. One `UPDATE`
 can point a ruleset at another ruleset's draft. The *"of this ruleset"* half is reachable with a
 composite FK; the *"is published"* half is not, while `Status` is derived.
+
+## What is deliberately not enforced yet
+
+Recorded so none of these reads as an oversight:
+
+- **Deleting a published version.** `EnsureDraft()` guards all nine mutators and `Publish`, but
+  nothing guards deletion. `Ruleset.Versions` uses `DeleteBehavior.Restrict`, so deleting a
+  *ruleset* that has versions fails loudly — but deleting a version directly does not. There is
+  no caller today, and the intended cover is role separation at stage 6, where only the worker
+  and Admin may delete.
+- **Invariant 4 has no database backstop.** `SetCurrentVersion` is the only thing checking that
+  the current version is published and belongs to this ruleset. A `CHECK` constraint cannot
+  contain a subquery — verified, Postgres answers `ERROR: cannot use subquery in check
+  constraint` — and a foreign key cannot express "and it must be published". A trigger could;
+  that is parked.
+- **`PublishedContent` is not validated as JSON.** The column is `text` rather than `jsonb`,
+  because `jsonb` reparses and re-serialises, which breaks `ContentHash` permanently. The cost is
+  that Postgres no longer rejects a non-JSON snapshot at write time, and nothing else does either.
+- **Two bands may share a `MinimumScore`**, and nothing orders them. Deferred to authoring.
 
 ## `PublicationRecord` and the content hash
 

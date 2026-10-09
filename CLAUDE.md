@@ -55,6 +55,7 @@ restart the debate.
 docker compose up -d --wait     # Postgres 17 on :5432
 dotnet build                    # expect 0 warnings
 dotnet test
+docker compose run --rm tests   # same suite inside Linux; see notes/dev-environment.md
 dotnet run --project src/CharacterCrucible.CoreApi
 ```
 
