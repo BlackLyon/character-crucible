@@ -1,4 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,11 +14,11 @@ public class TraitDefinitionConfiguration : IEntityTypeConfiguration<TraitDefini
 
         builder.HasKey(t => t.Id);
 
-        builder.Property(t => t.Key).HasMaxLength(100).IsRequired();
-        builder.Property(t => t.Name).HasMaxLength(200).IsRequired();
+        builder.Property(t => t.Key).HasMaxLength(FieldLengths.Key).IsRequired();
+        builder.Property(t => t.Name).HasMaxLength(FieldLengths.Name).IsRequired();
         builder.Property(t => t.Description).IsRequired();
         builder.Property(t => t.Category).IsRequired();
-        builder.Property(t => t.DomainKey).HasMaxLength(100);
+        builder.Property(t => t.DomainKey).HasMaxLength(FieldLengths.Key);
         builder.Property(t => t.MinValue).IsRequired();
         builder.Property(t => t.MaxValue).IsRequired();
         builder.Property(t => t.SortOrder).IsRequired();

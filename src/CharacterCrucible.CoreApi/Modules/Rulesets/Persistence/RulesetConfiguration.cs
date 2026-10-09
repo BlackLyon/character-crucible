@@ -1,4 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,9 +14,9 @@ public class RulesetConfiguration : IEntityTypeConfiguration<Ruleset>
 
         builder.HasKey(r => r.Id);
 
-        builder.Property(r => r.Name).HasMaxLength(200).IsRequired();
+        builder.Property(r => r.Name).HasMaxLength(FieldLengths.Name).IsRequired();
         builder.Property(r => r.Description).IsRequired();
-        builder.Property(r => r.Publisher).HasMaxLength(200).IsRequired();
+        builder.Property(r => r.Publisher).HasMaxLength(FieldLengths.Publisher).IsRequired();
 
         // Derived from DerivedFrom, so there is no column. EF maps get-only properties by
         // convention and would otherwise try to persist it.

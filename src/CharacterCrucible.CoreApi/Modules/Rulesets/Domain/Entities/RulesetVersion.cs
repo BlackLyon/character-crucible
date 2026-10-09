@@ -112,6 +112,8 @@ public class RulesetVersion
         ArgumentException.ThrowIfNullOrWhiteSpace(publisher);
         ArgumentException.ThrowIfNullOrWhiteSpace(publishedContent);
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(rulesetName.Length, FieldLengths.Name, nameof(rulesetName));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(publisher.Length, FieldLengths.Publisher, nameof(publisher));
 
         var contentHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(publishedContent)));
         var publishedDate = timeProvider.GetUtcNow();

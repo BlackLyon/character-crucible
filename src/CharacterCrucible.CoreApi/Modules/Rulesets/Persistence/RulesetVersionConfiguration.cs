@@ -1,4 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -58,9 +59,9 @@ public class RulesetVersionConfiguration : IEntityTypeConfiguration<RulesetVersi
             // DISCARDS duplicates, which is data loss in a supposedly frozen snapshot.
             // Validating the content is JSON belongs in Publish, not the column type.
             publication.Property(p => p.PublishedContent).HasColumnType("text");
-            publication.Property(p => p.ContentHash).HasMaxLength(64);
-            publication.Property(p => p.RulesetName).HasMaxLength(200);
-            publication.Property(p => p.Publisher).HasMaxLength(200);
+            publication.Property(p => p.ContentHash).HasMaxLength(FieldLengths.ContentHash);
+            publication.Property(p => p.RulesetName).HasMaxLength(FieldLengths.Name);
+            publication.Property(p => p.Publisher).HasMaxLength(FieldLengths.Publisher);
 
             // Nullable by necessity: a draft has no publication, and the partial index
             // below filters on this column being NULL. The CHECK constraint is what makes

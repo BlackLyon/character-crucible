@@ -11,12 +11,15 @@ public class TraitDefinition
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(key.Length, FieldLengths.Key, nameof(key));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, FieldLengths.Name, nameof(name));
 
         // Null is legal — skills carry no domain — but blank is not: it would fail every
         // domain lookup while looking like a value.
         if (domainKey is not null)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(domainKey);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(domainKey.Length, FieldLengths.Key, nameof(domainKey));
         }
 
         RulesetVersionId = rulesetVersionId;

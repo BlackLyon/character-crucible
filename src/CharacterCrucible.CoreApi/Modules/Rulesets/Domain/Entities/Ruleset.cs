@@ -10,6 +10,8 @@ public class Ruleset
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
         ArgumentException.ThrowIfNullOrWhiteSpace(publisher);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, FieldLengths.Name, nameof(name));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(publisher.Length, FieldLengths.Publisher, nameof(publisher));
 
         Name = name;
         Description = description;

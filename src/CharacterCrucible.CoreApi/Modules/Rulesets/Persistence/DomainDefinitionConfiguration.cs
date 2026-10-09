@@ -1,4 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -14,8 +15,8 @@ public class DomainDefinitionConfiguration : IEntityTypeConfiguration<DomainDefi
 
         builder.HasKey(d => d.Id);
 
-        builder.Property(d => d.Key).HasMaxLength(100).IsRequired();
-        builder.Property(d => d.Name).HasMaxLength(200).IsRequired();
+        builder.Property(d => d.Key).HasMaxLength(FieldLengths.Key).IsRequired();
+        builder.Property(d => d.Name).HasMaxLength(FieldLengths.Name).IsRequired();
         builder.Property(d => d.Description).IsRequired();
         builder.Property(d => d.SortOrder).IsRequired();
 

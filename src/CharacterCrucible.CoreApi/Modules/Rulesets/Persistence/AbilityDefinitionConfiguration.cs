@@ -1,4 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -14,8 +15,8 @@ public class AbilityDefinitionConfiguration : IEntityTypeConfiguration<AbilityDe
 
         builder.HasKey(a => a.Id);
 
-        builder.Property(a => a.Key).HasMaxLength(100).IsRequired();
-        builder.Property(a => a.Name).HasMaxLength(200).IsRequired();
+        builder.Property(a => a.Key).HasMaxLength(FieldLengths.Key).IsRequired();
+        builder.Property(a => a.Name).HasMaxLength(FieldLengths.Name).IsRequired();
         builder.Property(a => a.Description).IsRequired();
         builder.Property(a => a.AbilityType).IsRequired();
         builder.Property(a => a.RequiresApproval).IsRequired();

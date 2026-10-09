@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- FieldLengths is internal: the tests assert the guards against the same constants
+         the EF configuration uses, so a literal in a test could not drift from the column. -->
+    <InternalsVisibleTo Include="CharacterCrucible.CoreApi.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
