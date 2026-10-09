@@ -1,4 +1,4 @@
-﻿namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.StaticObjects;
+﻿namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Constants;
 
 /// <summary>
 /// Maximum lengths for the module's string columns. One source for the entity guards and the EF

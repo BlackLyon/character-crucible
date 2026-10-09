@@ -1,6 +1,6 @@
-﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
+﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Constants;
+using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Enums;
-using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.StaticObjects;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 
 namespace CharacterCrucible.CoreApi.Tests.Domain;

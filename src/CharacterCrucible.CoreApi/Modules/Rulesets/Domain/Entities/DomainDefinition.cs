@@ -1,4 +1,4 @@
-﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.StaticObjects;
+﻿using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Constants;
 using CharacterCrucible.CoreApi.Modules.Rulesets.Domain.ValueObjects;
 
 namespace CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities;
