@@ -17,6 +17,10 @@ Local only — `notes/` is gitignored and holds the real decision record:
 | `notes/<latest date>.md` | Where work stopped and what starts next |
 | `notes/parking-lot.md` | Deferred ideas. New ones go here rather than into the plan |
 | `notes/dev-environment.md` | Machine- and toolchain-level traps that look like code faults. Read it before debugging a build or test failure that makes no sense |
+| `notes/process-self-code-review.md` | Why the self-review exists, how to tell whether it is working, and what it has missed |
+| `notes/review-findings-<date>.md` | What each review found, what was reproduced, and what was deliberately left |
+| `notes/data-policy.md` | Deletion: the delete-request plus worker-reaper model, settled in principle |
+| `notes/stage-1-ef-config.md` | Stage 1's decisions and checkpoints, kept as the worked example for staging later modules |
 
 **Decisions in those files are settled.** If one comes up again, point at the recorded
 reasoning rather than reopening it — each significant decision carries a written falsifier,
