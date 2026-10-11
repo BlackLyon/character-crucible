@@ -24,26 +24,26 @@ public class ProbeCharacter
     /// <summary>Postgres xmin, which the database bumps on every row write.</summary>
     public uint Version { get; private set; }
 
-    private IList<TraitValue> TraitValues { get; set; } = [];
-    public IReadOnlyCollection<TraitValue> Traits => TraitValues.AsReadOnly();
+    private readonly IList<TraitValue> _traits = [];
+    public IReadOnlyCollection<TraitValue> Traits => _traits.AsReadOnly();
 
-    private IList<HeldAbility> AbilityValues { get; set; } = [];
-    public IReadOnlyCollection<HeldAbility> Abilities => AbilityValues.AsReadOnly();
+    private readonly IList<HeldAbility> _abilities = [];
+    public IReadOnlyCollection<HeldAbility> Abilities => _abilities.AsReadOnly();
 
     public void SetTrait(string key, int rating)
     {
-        var index = TraitValues.ToList().FindIndex(t => t.TraitKey == key);
+        var index = _traits.ToList().FindIndex(t => t.TraitKey == key);
         if (index < 0)
         {
-            TraitValues.Add(new TraitValue(key, rating));
+            _traits.Add(new TraitValue(key, rating));
         }
         else
         {
-            TraitValues[index] = new TraitValue(key, rating);
+            _traits[index] = new TraitValue(key, rating);
         }
     }
 
-    public void AddAbility(string key, DateTimeOffset acquired) => AbilityValues.Add(new HeldAbility(key, acquired));
+    public void AddAbility(string key, DateTimeOffset acquired) => _abilities.Add(new HeldAbility(key, acquired));
 }
 
 /// <summary>The same stand-in with an app-managed version, the alternative to xmin that was weighed.</summary>
@@ -57,12 +57,12 @@ public class CountedCharacter
     public string Name { get; private set; } = null!;
     public int Version { get; private set; }
 
-    private IList<TraitValue> TraitValues { get; set; } = [];
-    public IReadOnlyCollection<TraitValue> Traits => TraitValues.AsReadOnly();
+    private readonly IList<TraitValue> _traits = [];
+    public IReadOnlyCollection<TraitValue> Traits => _traits.AsReadOnly();
 
     public void SetTrait(string key, int rating)
     {
-        TraitValues.Add(new TraitValue(key, rating));
+        _traits.Add(new TraitValue(key, rating));
         Version++;
     }
 }
@@ -80,8 +80,8 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
         {
             e.ToTable("character");
             e.Property(c => c.Version).IsRowVersion();
-            e.ComplexCollection<IList<TraitValue>, TraitValue>("TraitValues").ToJson("traits");
-            e.ComplexCollection<IList<HeldAbility>, HeldAbility>("AbilityValues").ToJson("abilities");
+            e.ComplexCollection<IList<TraitValue>, TraitValue>("_traits").ToJson("traits");
+            e.ComplexCollection<IList<HeldAbility>, HeldAbility>("_abilities").ToJson("abilities");
             e.Ignore(c => c.Traits);
             e.Ignore(c => c.Abilities);
         });
@@ -90,7 +90,7 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
         {
             e.ToTable("counted_character");
             e.Property(c => c.Version).IsConcurrencyToken();
-            e.ComplexCollection<IList<TraitValue>, TraitValue>("TraitValues").ToJson("traits");
+            e.ComplexCollection<IList<TraitValue>, TraitValue>("_traits").ToJson("traits");
             e.Ignore(c => c.Traits);
         });
     }

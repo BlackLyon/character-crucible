@@ -58,7 +58,7 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
         await using var db = postgres.NewContext();
         var query = db.Characters
             .Where(c => ids.Contains(c.Id))
-            .Where(c => EF.Property<IList<TraitValue>>(c, "TraitValues").Any(t => t.TraitKey == "strength" && t.Rating >= 3))
+            .Where(c => EF.Property<IList<TraitValue>>(c, "_traits").Any(t => t.TraitKey == "strength" && t.Rating >= 3))
             .Select(c => c.Id);
         var sql = query.ToQueryString();
         output.WriteLine(sql);
@@ -77,7 +77,7 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
         await using var db = postgres.NewContext();
         IQueryable<int?> RatingOf(string key) => db.Characters
             .Where(c => c.Id == id)
-            .Select(c => EF.Property<IList<TraitValue>>(c, "TraitValues").Where(t => t.TraitKey == key).Select(t => (int?)t.Rating).FirstOrDefault());
+            .Select(c => EF.Property<IList<TraitValue>>(c, "_traits").Where(t => t.TraitKey == key).Select(t => (int?)t.Rating).FirstOrDefault());
 
         var sql = RatingOf("dexterity").ToQueryString();
         output.WriteLine(sql);
