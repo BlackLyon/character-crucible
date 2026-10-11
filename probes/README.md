@@ -24,6 +24,9 @@ protects, and revisit the decision. Do not edit the probe until green.
 | `A_filter_on_trait_key_and_rating…` | "Who qualifies for ability X" is possible as SQL over jsonb, without child tables | The jsonb persistence choice for traits |
 | `One_rating_is_projected_by_key…` | A single rating can be read by key in SQL; a missing key is null | Any query reading one trait |
 | `A_second_jsonb_collection_round_trips…` | Two jsonb collections coexist, and `DateTimeOffset` keeps its offset inside JSON | `HeldAbility.AcquiredDate` |
+| `A_normal_load_leaves_the_ledger_unloaded…` | The XP ledger is a navigation on `Character` that is never loaded by default, so an empty collection means "not loaded", never "no history" | Anything reading `Character.XpLedgerEntries` |
+| `Adding_to_the_unloaded_ledger…` | `Character` writes ledger entries through the unloaded collection: one INSERT, no history read | `Character`'s XP mutators |
+| `A_losing_concurrent_spend_rolls_back…` | The totals on `Character` and the ledger row commit or roll back together, because they share one `SaveChanges` | Any XP write split across two saves |
 
 ## Adding a probe
 
