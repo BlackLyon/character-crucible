@@ -53,3 +53,6 @@ Thumbs.db
 # Rider
 .idea/
 *.sln.iml
+
+# Local audit trail of the self-review gate's decisions. See .claude/hooks.
+.claude/review-gate.log
