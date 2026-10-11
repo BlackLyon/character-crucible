@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/probes/">
+    <Project Path="probes/CharacterCrucible.EfProbes/CharacterCrucible.EfProbes.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/CharacterCrucible.Contracts/CharacterCrucible.Contracts.csproj" />
     <Project Path="src/CharacterCrucible.CoreApi/CharacterCrucible.CoreApi.csproj" />

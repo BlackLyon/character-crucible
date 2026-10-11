@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- For its EF and Npgsql packages only, so the probes always run on the bits the app ships.
+       A separate pin here could drift and leave the probes green against an older EF. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CharacterCrucible.CoreApi\CharacterCrucible.CoreApi.csproj" />
+  </ItemGroup>
+
+</Project>
