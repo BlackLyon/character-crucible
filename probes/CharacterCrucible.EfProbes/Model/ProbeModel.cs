@@ -5,9 +5,12 @@ namespace CharacterCrucible.EfProbes.Model;
 /// <summary>A trait rating, as notes/domain/characters.md specifies it.</summary>
 public record TraitValue(string TraitKey, int Rating);
 
+/// <summary>An acquired ability, as notes/domain/characters.md specifies it.</summary>
+public record HeldAbility(string AbilityKey, DateTimeOffset AcquiredDate);
+
 /// <summary>
-/// Stand-in for Character, carrying only what the probes touch. Not the entity: the real one is
-/// written in the Characters module, and this follows it.
+/// Stand-in for Character, carrying only what the probes touch. Not the entity, and not a model
+/// for its methods: the mutators here exist to drive EF, not to state domain rules.
 /// </summary>
 public class ProbeCharacter
 {
@@ -21,10 +24,12 @@ public class ProbeCharacter
     /// <summary>Postgres xmin, which the database bumps on every row write.</summary>
     public uint Version { get; private set; }
 
-    private IList<TraitValue> TraitValues { get; set; } = new List<TraitValue>();
+    private IList<TraitValue> TraitValues { get; set; } = [];
     public IReadOnlyCollection<TraitValue> Traits => TraitValues.AsReadOnly();
 
-    /// <summary>Replaces the entry for the key rather than mutating it.</summary>
+    private IList<HeldAbility> AbilityValues { get; set; } = [];
+    public IReadOnlyCollection<HeldAbility> Abilities => AbilityValues.AsReadOnly();
+
     public void SetTrait(string key, int rating)
     {
         var index = TraitValues.ToList().FindIndex(t => t.TraitKey == key);
@@ -37,9 +42,11 @@ public class ProbeCharacter
             TraitValues[index] = new TraitValue(key, rating);
         }
     }
+
+    public void AddAbility(string key, DateTimeOffset acquired) => AbilityValues.Add(new HeldAbility(key, acquired));
 }
 
-/// <summary>The same stand-in with an app-managed version, the other option the spec allows.</summary>
+/// <summary>The same stand-in with an app-managed version, the alternative to xmin that was weighed.</summary>
 public class CountedCharacter
 {
     public CountedCharacter(string name) => Name = name;
@@ -50,7 +57,7 @@ public class CountedCharacter
     public string Name { get; private set; } = null!;
     public int Version { get; private set; }
 
-    private IList<TraitValue> TraitValues { get; set; } = new List<TraitValue>();
+    private IList<TraitValue> TraitValues { get; set; } = [];
     public IReadOnlyCollection<TraitValue> Traits => TraitValues.AsReadOnly();
 
     public void SetTrait(string key, int rating)
@@ -71,15 +78,19 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
 
         modelBuilder.Entity<ProbeCharacter>(e =>
         {
+            e.ToTable("character");
             e.Property(c => c.Version).IsRowVersion();
-            e.ComplexCollection<IList<TraitValue>, TraitValue>("TraitValues").ToJson();
+            e.ComplexCollection<IList<TraitValue>, TraitValue>("TraitValues").ToJson("traits");
+            e.ComplexCollection<IList<HeldAbility>, HeldAbility>("AbilityValues").ToJson("abilities");
             e.Ignore(c => c.Traits);
+            e.Ignore(c => c.Abilities);
         });
 
         modelBuilder.Entity<CountedCharacter>(e =>
         {
+            e.ToTable("counted_character");
             e.Property(c => c.Version).IsConcurrencyToken();
-            e.ComplexCollection<IList<TraitValue>, TraitValue>("TraitValues").ToJson();
+            e.ComplexCollection<IList<TraitValue>, TraitValue>("TraitValues").ToJson("traits");
             e.Ignore(c => c.Traits);
         });
     }

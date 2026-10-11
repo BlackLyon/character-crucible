@@ -6,11 +6,21 @@ using Testcontainers.PostgreSql;
 namespace CharacterCrucible.EfProbes;
 
 /// <summary>One Postgres for every probe class, so adding a probe class adds no container start.</summary>
+/// <remarks>
+/// EnsureCreated rather than migrations: these probe EF's behaviour against stand-in types, not
+/// our schema. The mapping tests in CoreApi.Tests are the ones that go through migrations.
+/// </remarks>
 public sealed class PostgresProbeFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17-alpine").Build();
+    /// <summary>Keep in step with the postgres service in docker-compose.yml and CoreApi.Tests' fixture.</summary>
+    private const string Image = "postgres:17-alpine";
 
-    /// <summary>SQL of the most recent commands, for probes that assert on what EF sent.</summary>
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder(Image).Build();
+
+    /// <summary>
+    /// Every command executed since the last Clear(). Safe only because the probes share one
+    /// collection, which xUnit runs serially.
+    /// </summary>
     public List<string> Sql { get; } = [];
 
     public async Task InitializeAsync()

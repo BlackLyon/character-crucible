@@ -8,14 +8,26 @@ namespace CharacterCrucible.EfProbes;
 [Collection(ProbeCollection.Name)]
 public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHelper output)
 {
-    private async Task<Guid> InsertAsync(string name)
+    private async Task<Guid> InsertAsync()
     {
         await using var db = postgres.NewContext();
-        var character = new ProbeCharacter(name);
+        var character = new ProbeCharacter("Probe");
         character.SetTrait("strength", 2);
         db.Characters.Add(character);
         await db.SaveChangesAsync();
         return character.Id;
+    }
+
+    private async Task<uint> CurrentVersionAsync(Guid id)
+    {
+        await using var db = postgres.NewContext();
+        return (await db.Characters.SingleAsync(c => c.Id == id)).Version;
+    }
+
+    private string SingleUpdate()
+    {
+        output.WriteLine(string.Join("\n---\n", postgres.Sql));
+        return Assert.Single(postgres.Sql, s => s.Contains("UPDATE"));
     }
 
     [Fact]
@@ -29,18 +41,18 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         Assert.True(version.IsConcurrencyToken);
 
         var columns = await db.Database
-            .SqlQuery<string>($"select column_name as \"Value\" from information_schema.columns where table_schema = 'probes' and table_name = 'characters'")
+            .SqlQuery<string>($"select column_name as \"Value\" from information_schema.columns where table_schema = 'probes' and table_name = 'character'")
             .ToListAsync();
         output.WriteLine(string.Join(", ", columns));
-        Assert.Contains("trait_values", columns);
+        Assert.Contains("traits", columns);
         Assert.DoesNotContain("xmin", columns);
         Assert.DoesNotContain("version", columns);
     }
 
     [Fact]
-    public async Task A_change_only_to_the_jsonb_traits_bumps_xmin_and_EF_reads_it_back()
+    public async Task A_jsonb_only_change_bumps_xmin_and_one_UPDATE_reads_it_back()
     {
-        var id = await InsertAsync("Jsonb only");
+        var id = await InsertAsync();
 
         await using var db = postgres.NewContext();
         var character = await db.Characters.SingleAsync(c => c.Id == id);
@@ -50,19 +62,18 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         postgres.Sql.Clear();
         character.SetTrait("strength", 3);
         await db.SaveChangesAsync();
-        output.WriteLine(string.Join("\n---\n", postgres.Sql));
 
-        var after = character.Version;
-        Assert.NotEqual(before, after);
-
-        await using var reload = postgres.NewContext();
-        Assert.Equal(after, (await reload.Characters.SingleAsync(c => c.Id == id)).Version);
+        var update = SingleUpdate();
+        Assert.Contains("xmin = @", update);
+        Assert.Contains("RETURNING xmin", update);
+        Assert.NotEqual(before, character.Version);
+        Assert.Equal(character.Version, await CurrentVersionAsync(id));
     }
 
     [Fact]
     public async Task A_stale_write_from_a_second_context_throws()
     {
-        var id = await InsertAsync("Two writers");
+        var id = await InsertAsync();
 
         await using var first = postgres.NewContext();
         await using var second = postgres.NewContext();
@@ -76,33 +87,33 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
     }
 
-    // The apply path: the worker evaluated against an older version, and the Core API loads fresh.
-    // Setting the original value makes the UPDATE's WHERE carry the worker's version, so the
-    // compare and the write are one statement.
+    // The apply path: the Core API loads fresh, then checks against the version the worker
+    // evaluated, inside the UPDATE itself rather than as a separate read.
     [Fact]
-    public async Task The_workers_expected_version_can_drive_the_check_on_a_fresh_load()
+    public async Task The_workers_version_as_original_value_applies_when_current_and_throws_when_stale()
     {
-        var id = await InsertAsync("Moved under the request");
+        var id = await InsertAsync();
+        var evaluatedAgainst = await CurrentVersionAsync(id);
 
-        uint evaluatedAgainst;
-        await using (var worker = postgres.NewContext())
+        await using (var apply = postgres.NewContext())
         {
-            evaluatedAgainst = (await worker.Characters.SingleAsync(c => c.Id == id)).Version;
+            var character = await apply.Characters.SingleAsync(c => c.Id == id);
+            apply.Entry(character).Property(c => c.Version).OriginalValue = evaluatedAgainst;
+            character.SetTrait("strength", 3);
+            postgres.Sql.Clear();
+            await apply.SaveChangesAsync();
+            Assert.Contains("xmin = @", SingleUpdate());
         }
 
-        await using (var meanwhile = postgres.NewContext())
+        // That apply moved the character on, so the worker's version is now stale.
+        await using (var apply = postgres.NewContext())
         {
-            (await meanwhile.Characters.SingleAsync(c => c.Id == id)).SetTrait("wits", 2);
-            await meanwhile.SaveChangesAsync();
+            var character = await apply.Characters.SingleAsync(c => c.Id == id);
+            Assert.NotEqual(evaluatedAgainst, character.Version);
+            apply.Entry(character).Property(c => c.Version).OriginalValue = evaluatedAgainst;
+            character.SetTrait("strength", 4);
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => apply.SaveChangesAsync());
         }
-
-        await using var apply = postgres.NewContext();
-        var character = await apply.Characters.SingleAsync(c => c.Id == id);
-        Assert.NotEqual(evaluatedAgainst, character.Version);
-
-        apply.Entry(character).Property(c => c.Version).OriginalValue = evaluatedAgainst;
-        character.SetTrait("strength", 3);
-        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => apply.SaveChangesAsync());
     }
 
     [Fact]
@@ -124,9 +135,11 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
 
         a.SetTrait("strength", 3);
         await first.SaveChangesAsync();
-        Assert.Equal(1, a.Version);
 
         b.SetTrait("dexterity", 4);
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+
+        await using var reload = postgres.NewContext();
+        Assert.Equal(1, (await reload.CountedCharacters.SingleAsync(c => c.Id == id)).Version);
     }
 }

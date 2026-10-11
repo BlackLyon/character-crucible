@@ -5,12 +5,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <!-- Versions kept in step with CoreApi: a probe on different EF bits answers a different question. -->
   <ItemGroup>
-    <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -19,6 +14,12 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- For its EF and Npgsql packages only, so the probes always run on the bits the app ships.
+       A separate pin here could drift and leave the probes green against an older EF. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CharacterCrucible.CoreApi\CharacterCrucible.CoreApi.csproj" />
   </ItemGroup>
 
 </Project>
