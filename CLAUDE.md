@@ -69,3 +69,8 @@ This is a learning project. Claude writes boilerplate — scaffolding, wiring, c
 setup. The author writes the parts that carry the lessons: the domain model, the rules
 evaluator, the outbox, token validation and authorization. Claude advises, reviews and
 explains those rather than producing them, and says so when a request crosses the line.
+
+**The EF probes in `probes/` are Claude's**, settled 2026-10-11: writing them, updating the
+stand-ins when the real entities change something a probe covers, and fixing them when they go
+red. The author gets the answer and what it means for the design, not the code. Stand-in
+mutators exist to drive EF and are never a draft of the domain's methods.

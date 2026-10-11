@@ -29,3 +29,7 @@ protects, and revisit the decision. Do not edit the probe until green.
 
 A new EF question goes here as a test, not into a scratch project, so its answer stays runnable.
 All probe classes share one Postgres through the `ProbeCollection` fixture.
+
+The stand-ins carry only what a probe asks about. They change when the real entity takes a shape
+no probe covers, such as a new jsonb collection or a different value-object shape, not when it
+gains ordinary properties. Owned by Claude; see the work split in `CLAUDE.md`.
