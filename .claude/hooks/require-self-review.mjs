@@ -11,8 +11,11 @@
 // Node rather than a shell script: there is no jq on the author's machine, and Claude Code
 // runs on Node, so it is the one interpreter guaranteed present wherever this hook runs.
 
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { appendFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
+const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const allow = () => process.exit(0);
 
 let command = "";
@@ -30,20 +33,62 @@ const GH = String.raw`gh\s+pr\s+create\b`;
 
 if (!new RegExp(START + ENV + GH).test(command)) allow();
 
+const git = (...args) =>
+  execFileSync("git", args, { cwd: projectDir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+
+/** Files the PR would carry, or null if git cannot say -- which then fails closed. */
+function changedFiles() {
+  try {
+    const base = (() => {
+      try { return git("merge-base", "origin/main", "HEAD"); } catch { return git("merge-base", "main", "HEAD"); }
+    })();
+    // --no-renames: a .cs renamed to .md must show its deletion, not just the new name.
+    return git("diff", "--name-only", "--no-renames", base, "HEAD").split("\n").filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
+// Audit trail of every decision, so a skip can be checked after the fact. Gitignored, local.
+function record(decision, files) {
+  try {
+    let branch = "", head = "";
+    try { branch = git("rev-parse", "--abbrev-ref", "HEAD"); head = git("rev-parse", "--short", "HEAD"); } catch {}
+    const entry = { at: new Date().toISOString(), decision, branch, head, files, command };
+    appendFileSync(join(projectDir, ".claude", "review-gate.log"), JSON.stringify(entry) + "\n");
+  } catch {
+    // Never let the audit log decide the outcome.
+  }
+}
+
+const files = changedFiles();
+
+// Docs-only diffs cannot change what the app does. An empty list is not docs-only.
+if (files && files.length > 0 && files.every((f) => f.toLowerCase().endsWith(".md"))) {
+  record("auto-allow: docs only", files);
+  allow();
+}
+
 // The override must be an env prefix on that same invocation, not merely present somewhere.
 const OVERRIDE = String.raw`CC_REVIEW_DONE=\S+\s+`;
-if (new RegExp(START + ENV + OVERRIDE + ENV + GH).test(command)) allow();
+if (new RegExp(START + ENV + OVERRIDE + ENV + GH).test(command)) {
+  record("override", files);
+  allow();
+}
 
+record("deny", files);
 process.stdout.write(JSON.stringify({
   hookSpecificOutput: {
     hookEventName: "PreToolUse",
     permissionDecision: "deny",
     permissionDecisionReason:
-      "Self-review required before opening a PR. This rule has already been broken twice " +
-      "(PR #10, PR #12). Run the self-code-review skill on this diff, then fix or record " +
-      "every finding, and re-run with CC_REVIEW_DONE=1 prefixed. Small or infrastructure-only " +
-      "diffs are NOT exempt -- PR #12 was one Compose file and still had something a review " +
-      "would have named. If the review genuinely does not apply, say so to the user and get " +
-      "their agreement before overriding; never override silently.",
+      "Self-review required before opening a PR that changes what runs or what it is allowed " +
+      "to do: logic, service-to-service or environment config, security surface, build/test/CI " +
+      "config, and major dependency upgrades. Run the self-code-review skill, fix or record every " +
+      "finding, then re-run with CC_REVIEW_DONE=1 prefixed (Bash tool). Skippable: docs-only " +
+      "diffs (auto-allowed), and patch/minor dependency bumps that build clean at -warnaserror " +
+      "with the full suite passing. To skip, tell the user which category the change falls in " +
+      "and why, and get their agreement before overriding; never override silently. " +
+      "See notes/process-self-code-review.md.",
   },
 }));
