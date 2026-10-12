@@ -44,6 +44,45 @@ public class ProbeCharacter
     }
 
     public void AddAbility(string key, DateTimeOffset acquired) => _abilities.Add(new HeldAbility(key, acquired));
+
+    public int TotalEarnedXp { get; private set; }
+    public int UnspentXp { get; private set; }
+
+    // Written through, never loaded by default: empty after a normal load means "not loaded".
+    private readonly IList<ProbeLedgerEntry> _xpLedgerEntries = [];
+    public IReadOnlyCollection<ProbeLedgerEntry> XpLedgerEntries => _xpLedgerEntries.AsReadOnly();
+
+    public void AwardXp(int amount)
+    {
+        TotalEarnedXp += amount;
+        UnspentXp += amount;
+        _xpLedgerEntries.Add(new ProbeLedgerEntry(amount, TotalEarnedXp, UnspentXp));
+    }
+
+    public void SpendXp(int amount)
+    {
+        UnspentXp -= amount;
+        _xpLedgerEntries.Add(new ProbeLedgerEntry(-amount, TotalEarnedXp, UnspentXp));
+    }
+}
+
+/// <summary>Stand-in for XpLedgerEntry: one row per XP transaction, with running balances.</summary>
+public class ProbeLedgerEntry
+{
+    public ProbeLedgerEntry(int delta, int totalEarnedAfter, int unspentAfter)
+    {
+        Delta = delta;
+        TotalEarnedAfter = totalEarnedAfter;
+        UnspentAfter = unspentAfter;
+    }
+
+    private ProbeLedgerEntry() { }
+
+    public Guid Id { get; private set; }
+    public Guid CharacterId { get; private set; }
+    public int Delta { get; private set; }
+    public int TotalEarnedAfter { get; private set; }
+    public int UnspentAfter { get; private set; }
 }
 
 /// <summary>The same stand-in with an app-managed version, the alternative to xmin that was weighed.</summary>
@@ -84,7 +123,10 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
             e.ComplexCollection<IList<HeldAbility>, HeldAbility>("_abilities").ToJson("abilities");
             e.Ignore(c => c.Traits);
             e.Ignore(c => c.Abilities);
+            e.HasMany(c => c.XpLedgerEntries).WithOne().HasForeignKey(l => l.CharacterId);
         });
+
+        modelBuilder.Entity<ProbeLedgerEntry>().ToTable("xp_ledger_entry");
 
         modelBuilder.Entity<CountedCharacter>(e =>
         {
