@@ -48,9 +48,8 @@ public class ProbeCharacter
     public int TotalEarnedXp { get; private set; }
     public int UnspentXp { get; private set; }
 
-    // Written through, never loaded by default: empty after a normal load means "not loaded".
+    // Write-only: no getter, so "not loaded" can never be read as "no history". History is a query.
     private readonly IList<ProbeLedgerEntry> _xpLedgerEntries = [];
-    public IReadOnlyCollection<ProbeLedgerEntry> XpLedgerEntries => _xpLedgerEntries.AsReadOnly();
 
     public void AwardXp(int amount)
     {
@@ -123,7 +122,7 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
             e.ComplexCollection<IList<HeldAbility>, HeldAbility>("_abilities").ToJson("abilities");
             e.Ignore(c => c.Traits);
             e.Ignore(c => c.Abilities);
-            e.HasMany(c => c.XpLedgerEntries).WithOne().HasForeignKey(l => l.CharacterId);
+            e.HasMany<ProbeLedgerEntry>("_xpLedgerEntries").WithOne().HasForeignKey(l => l.CharacterId);
         });
 
         modelBuilder.Entity<ProbeLedgerEntry>().ToTable("xp_ledger_entry");
