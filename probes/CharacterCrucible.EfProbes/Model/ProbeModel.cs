@@ -22,7 +22,7 @@ public class ProbeCharacter
     public string Name { get; private set; } = null!;
 
     /// <summary>Postgres xmin, which the database bumps on every row write.</summary>
-    public uint Version { get; private set; }
+    public uint RowVersion { get; private set; }
 
     private readonly IList<TraitValue> _traits = [];
     public IReadOnlyCollection<TraitValue> Traits => _traits.AsReadOnly();
@@ -93,7 +93,7 @@ public class CountedCharacter
 
     public Guid Id { get; private set; }
     public string Name { get; private set; } = null!;
-    public int Version { get; private set; }
+    public int RowVersion { get; private set; }
 
     private readonly IList<TraitValue> _traits = [];
     public IReadOnlyCollection<TraitValue> Traits => _traits.AsReadOnly();
@@ -101,7 +101,7 @@ public class CountedCharacter
     public void SetTrait(string key, int rating)
     {
         _traits.Add(new TraitValue(key, rating));
-        Version++;
+        RowVersion++;
     }
 }
 
@@ -117,7 +117,7 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
         modelBuilder.Entity<ProbeCharacter>(e =>
         {
             e.ToTable("character");
-            e.Property(c => c.Version).IsRowVersion();
+            e.Property(c => c.RowVersion).IsRowVersion();
             e.ComplexCollection<IList<TraitValue>, TraitValue>("_traits").ToJson("traits");
             e.ComplexCollection<IList<HeldAbility>, HeldAbility>("_abilities").ToJson("abilities");
             e.Ignore(c => c.Traits);
@@ -130,7 +130,7 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
         modelBuilder.Entity<CountedCharacter>(e =>
         {
             e.ToTable("counted_character");
-            e.Property(c => c.Version).IsConcurrencyToken();
+            e.Property(c => c.RowVersion).IsConcurrencyToken();
             e.ComplexCollection<IList<TraitValue>, TraitValue>("_traits").ToJson("traits");
             e.Ignore(c => c.Traits);
         });

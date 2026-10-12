@@ -21,7 +21,7 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
     private async Task<uint> CurrentVersionAsync(Guid id)
     {
         await using var db = postgres.NewContext();
-        return (await db.Characters.SingleAsync(c => c.Id == id)).Version;
+        return (await db.Characters.SingleAsync(c => c.Id == id)).RowVersion;
     }
 
     private string SingleUpdate()
@@ -34,7 +34,7 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
     public async Task Xmin_maps_to_the_system_column_and_adds_no_real_one()
     {
         await using var db = postgres.NewContext();
-        var version = db.Model.FindEntityType(typeof(ProbeCharacter))!.FindProperty(nameof(ProbeCharacter.Version))!;
+        var version = db.Model.FindEntityType(typeof(ProbeCharacter))!.FindProperty(nameof(ProbeCharacter.RowVersion))!;
 
         Assert.Equal("xmin", version.GetColumnName());
         Assert.Equal("xid", version.GetColumnType());
@@ -46,7 +46,7 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         output.WriteLine(string.Join(", ", columns));
         Assert.Contains("traits", columns);
         Assert.DoesNotContain("xmin", columns);
-        Assert.DoesNotContain("version", columns);
+        Assert.DoesNotContain("row_version", columns);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
 
         await using var db = postgres.NewContext();
         var character = await db.Characters.SingleAsync(c => c.Id == id);
-        var before = character.Version;
+        var before = character.RowVersion;
         Assert.NotEqual(0u, before);
 
         postgres.Sql.Clear();
@@ -66,8 +66,8 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         var update = SingleUpdate();
         Assert.Contains("xmin = @", update);
         Assert.Contains("RETURNING xmin", update);
-        Assert.NotEqual(before, character.Version);
-        Assert.Equal(character.Version, await CurrentVersionAsync(id));
+        Assert.NotEqual(before, character.RowVersion);
+        Assert.Equal(character.RowVersion, await CurrentVersionAsync(id));
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         await using (var apply = postgres.NewContext())
         {
             var character = await apply.Characters.SingleAsync(c => c.Id == id);
-            apply.Entry(character).Property(c => c.Version).OriginalValue = evaluatedAgainst;
+            apply.Entry(character).Property(c => c.RowVersion).OriginalValue = evaluatedAgainst;
             character.SetTrait("strength", 3);
             postgres.Sql.Clear();
             await apply.SaveChangesAsync();
@@ -109,8 +109,8 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         await using (var apply = postgres.NewContext())
         {
             var character = await apply.Characters.SingleAsync(c => c.Id == id);
-            Assert.NotEqual(evaluatedAgainst, character.Version);
-            apply.Entry(character).Property(c => c.Version).OriginalValue = evaluatedAgainst;
+            Assert.NotEqual(evaluatedAgainst, character.RowVersion);
+            apply.Entry(character).Property(c => c.RowVersion).OriginalValue = evaluatedAgainst;
             character.SetTrait("strength", 4);
             await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => apply.SaveChangesAsync());
         }
@@ -140,6 +140,6 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
 
         await using var reload = postgres.NewContext();
-        Assert.Equal(1, (await reload.CountedCharacters.SingleAsync(c => c.Id == id)).Version);
+        Assert.Equal(1, (await reload.CountedCharacters.SingleAsync(c => c.Id == id)).RowVersion);
     }
 }
