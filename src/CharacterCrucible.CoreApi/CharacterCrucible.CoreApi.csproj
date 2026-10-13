@@ -30,7 +30,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Modules\Advancement\" />
     <Folder Include="Modules\Characters\Persistence\" />
   </ItemGroup>
 

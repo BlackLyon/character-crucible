@@ -4,13 +4,23 @@ The Core API is a modular monolith. Each module owns a slice of the domain, keep
 Postgres schema, and talks to other modules through explicit contracts rather than by
 reaching into their types.
 
-Planned modules:
+Modules:
 
 | Module | Owns |
 |---|---|
-| `Characters` | Characters, their trait ratings and acquired powers |
 | `Rulesets` | Ruleset content authoring, and publishing immutable versioned snapshots |
-| `Advancement` | Advancement requests, their lifecycle, approvals and the audit trail |
+| `Characters` | Characters, their traits and abilities, the XP ledger, advancement requests and their lifecycle, and the audit trail |
+
+**Two modules, not three.** Advancement was planned as its own module and folded into
+`Characters` before any of it was written. Its central operation — applying an advancement —
+always changes a request *and* a character in one transaction, so a separate module would have
+put a contract across the boundary that every apply had to cross, mirroring `Character`'s own
+operations. The audit trail was never advancement-specific either: approving a character,
+removing it from play and granting XP all need audit rows.
+
+Split it back out if the request workflow grows concerns `Characters` does not share — a
+separate deployable, or requests that apply to something other than characters. The audit
+trail gets its own module the day a second module needs auditing.
 
 ## The rule
 
