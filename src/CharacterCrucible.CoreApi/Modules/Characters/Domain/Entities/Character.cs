@@ -15,6 +15,11 @@ public class Character
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, FieldLengths.Name, nameof(name));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(archetypeKey.Length, FieldLengths.ArchetypeKey, nameof(archetypeKey));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(race.Length, FieldLengths.Race, nameof(race));
+        
+        if (!Enum.IsDefined(sex))
+        {
+            throw new ArgumentOutOfRangeException(nameof(sex), sex, "Invalid character sex.");
+        }
 
         OwnerId = ownerId;
         RulesetVersionId = rulesetVersionId;
@@ -36,7 +41,7 @@ public class Character
     public CharacterSex Sex { get; private set; }
     public string Race { get; private set; } = null!;
     public int Age { get; private set; }
-    public CharacterStatus Status { get; private set; } = CharacterStatus.PendingApproval;
+    public CharacterStatus Status { get; private set; } = CharacterStatus.Draft;
     public uint RowVersion { get; private set; }
     private readonly IList<CharacterTrait> _traits = [];
     public IReadOnlyCollection<CharacterTrait> Traits => _traits.AsReadOnly();
@@ -46,4 +51,28 @@ public class Character
     public int UnspentXp { get; private set; }
     private readonly IList<XpLedgerEntry> _xpLedgerEntries = [];
     public DateTimeOffset CreatedDate { get; private set; }
+
+    public void Approve()
+    {
+    }
+
+    public void SendBack(string reason)
+    {
+    }
+    public void RemoveFromPlay(CharacterStatus status, string reason)
+    {
+    }
+
+    public void ReturnToPlay()
+    {
+    }
+
+    public void SubmitForApproval()
+    {
+    }
+    public void GrantXp(int amount, string reason, TimeProvider timeProvider)
+    {
+    }
+
+
 }

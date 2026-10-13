@@ -3,6 +3,9 @@
 public enum CharacterStatus
 {
     Active = 1,
-    OutOfPlay = 2,
-    PendingApproval = 3,
+    Banned = 2,
+    Dead = 3,
+    Draft = 4,
+    PendingApproval = 5,
+    Retired = 6,
 }
