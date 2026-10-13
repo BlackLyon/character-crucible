@@ -6,14 +6,15 @@ namespace CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 
 public class Character
 {
-    public Character(Guid ownerId, Guid rulesetVersionId, string name, string archetypeKey, string sex, string race, int age)
+    public Character(Guid ownerId, Guid rulesetVersionId, string name, string archetypeKey, CharacterSex sex, string race, int age, TimeProvider timeProvider)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(archetypeKey);
-        ArgumentException.ThrowIfNullOrWhiteSpace(sex);
         ArgumentException.ThrowIfNullOrWhiteSpace(race);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(age, nameof(age));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, FieldLengths.Name, nameof(name));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(archetypeKey.Length, FieldLengths.ArchetypeKey, nameof(archetypeKey));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(race.Length, FieldLengths.Race, nameof(race));
 
         OwnerId = ownerId;
         RulesetVersionId = rulesetVersionId;
@@ -22,6 +23,7 @@ public class Character
         Sex = sex;
         Race = race;
         Age = age;
+        CreatedDate = timeProvider.GetUtcNow();
     }
     /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>
     private Character() { }
@@ -31,7 +33,7 @@ public class Character
     public Guid RulesetVersionId { get; private set; }
     public string Name { get; private set; } = null!;
     public string ArchetypeKey { get; private set; } = null!;
-    public string Sex { get; private set; } = null!;
+    public CharacterSex Sex { get; private set; }
     public string Race { get; private set; } = null!;
     public int Age { get; private set; }
     public CharacterStatus Status { get; private set; } = CharacterStatus.PendingApproval;

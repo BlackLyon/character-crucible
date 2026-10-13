@@ -1,20 +1,22 @@
-﻿namespace CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
+﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
+
+namespace CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 
 public class XpLedgerEntry
 {
-    public XpLedgerEntry(Guid characterId, int delta, int totalEarnedXpAfter, int unspentXpAfter, string reason, Guid? advancementRequestId, DateTimeOffset occurredAt)
+    internal XpLedgerEntry(int delta, int totalEarnedXpAfter, int unspentXpAfter, string reason, Guid? advancementRequestId, TimeProvider timeProvider)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
         ArgumentOutOfRangeException.ThrowIfNegative(totalEarnedXpAfter, nameof(totalEarnedXpAfter));
         ArgumentOutOfRangeException.ThrowIfNegative(unspentXpAfter, nameof(unspentXpAfter));
 
-        CharacterId = characterId;
         Delta = delta;
         TotalEarnedXpAfter = totalEarnedXpAfter;
         UnspentXpAfter = unspentXpAfter;
         Reason = reason;
         AdvancementRequestId = advancementRequestId;
-        OccurredAt = occurredAt;
+        OccurredAt = timeProvider.GetUtcNow();
     }
 
     /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>
