@@ -9,6 +9,6 @@ internal static class FieldLengths
 {
     internal const int Name = 50;
     internal const int Reason = 250;
-    internal const int ArchetypeKey = 100;
     internal const int Race = 20;
+    internal const int KeyName = 100;
 }
