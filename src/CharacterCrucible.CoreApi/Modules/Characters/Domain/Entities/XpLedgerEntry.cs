@@ -10,6 +10,7 @@ public class XpLedgerEntry
         ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
         ArgumentOutOfRangeException.ThrowIfNegative(totalEarnedXpAfter, nameof(totalEarnedXpAfter));
         ArgumentOutOfRangeException.ThrowIfNegative(unspentXpAfter, nameof(unspentXpAfter));
+        ArgumentNullException.ThrowIfNull(timeProvider);
 
         Delta = delta;
         TotalEarnedXpAfter = totalEarnedXpAfter;
@@ -20,9 +21,7 @@ public class XpLedgerEntry
     }
 
     /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>
-    private XpLedgerEntry()
-    {
-    }
+    private XpLedgerEntry() { }
 
     public Guid Id { get; private set; }
     public Guid CharacterId { get; private set; }

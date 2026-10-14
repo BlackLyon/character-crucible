@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
+﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Inputs;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
@@ -18,6 +16,7 @@ public class Character
         CreatedDate = timeProvider.GetUtcNow();
         ApplyDraft(draft);
     }
+
     /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>
     private Character() { }
 
@@ -48,7 +47,7 @@ public class Character
             throw new InvalidOperationException($"Cannot approve a character that is not in the {CharacterStatus.PendingApproval} status.");
         }
 
-        var approvedAt = timeProvider.GetUtcNow();      // once
+        var approvedAt = timeProvider.GetUtcNow();
 
         for (var i = 0; i < _abilities.Count; i++)
         {
@@ -60,7 +59,7 @@ public class Character
 
     public void SendBack(string reason)
     {
-        if(Status != CharacterStatus.PendingApproval)
+        if (Status != CharacterStatus.PendingApproval)
         {
             throw new InvalidOperationException($"Cannot send back a character that is not in the {CharacterStatus.PendingApproval} status.");
         }
@@ -70,7 +69,7 @@ public class Character
 
     public void RemoveFromPlay(CharacterStatus status, string reason)
     {
-        if(Status != CharacterStatus.Active)
+        if (Status != CharacterStatus.Active)
         {
             throw new InvalidOperationException($"Cannot remove a character from play that is not in the {CharacterStatus.Active} status.");
         }
@@ -85,9 +84,9 @@ public class Character
 
     public void ReturnToPlay()
     {
-        if(Status != CharacterStatus.Banned && Status != CharacterStatus.Dead && Status != CharacterStatus.Retired)
+        if (Status != CharacterStatus.Banned && Status != CharacterStatus.Dead && Status != CharacterStatus.Retired)
         {
-            throw new InvalidOperationException($"Cannot return a character to play that is not in the {CharacterStatus.Banned}, {CharacterStatus.Dead}, {CharacterStatus.Retired} status.");
+            throw new InvalidOperationException($"Cannot return a character to play that is not in the {CharacterStatus.Banned}, {CharacterStatus.Dead}, or {CharacterStatus.Retired} status.");
         }
 
         Status = CharacterStatus.Active;
@@ -95,7 +94,7 @@ public class Character
 
     public void SubmitForApproval()
     {
-        if(Status != CharacterStatus.Draft)
+        if (Status != CharacterStatus.Draft)
         {
             throw new InvalidOperationException($"Cannot submit a character for approval that is not in the {CharacterStatus.Draft} status.");
         }
@@ -119,6 +118,7 @@ public class Character
         {
             throw new InvalidOperationException($"Cannot unban a character that is not in the {CharacterStatus.DraftBanned} status.");
         }
+
         Status = CharacterStatus.Draft;
     }
 
@@ -141,7 +141,7 @@ public class Character
 
     public void UpdateDraft(CharacterDraft draft)
     {
-        if(Status != CharacterStatus.Draft)
+        if (Status != CharacterStatus.Draft)
         {
             throw new InvalidOperationException($"Cannot update a character that is not in the {CharacterStatus.Draft} status.");
         }
@@ -158,7 +158,7 @@ public class Character
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(draft.Age, nameof(draft.Age));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(draft.Name.Length, FieldLengths.Name, nameof(draft.Name));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(draft.Race.Length, FieldLengths.Race, nameof(draft.Race));
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(draft.ArchetypeKey.Length, FieldLengths.KeyName, nameof(draft.ArchetypeKey));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(draft.ArchetypeKey.Length, FieldLengths.Key, nameof(draft.ArchetypeKey));
         var traits = ValidateTraits(draft.Traits);
         var abilities = ValidateAbilities(draft.Abilities);
 
@@ -172,24 +172,33 @@ public class Character
         Sex = draft.Sex;
         Race = draft.Race;
         Age = draft.Age;
-        _traits.Clear(); foreach (var trait in traits) _traits.Add(trait);
-        _abilities.Clear(); foreach (var ability in abilities) _abilities.Add(ability);
+        _traits.Clear();
+        foreach (var trait in traits)
+        {
+            _traits.Add(trait);
+        }
+
+        _abilities.Clear();
+        foreach (var ability in abilities)
+        {
+            _abilities.Add(ability);
+        }
     }
 
     private List<CharacterTrait> ValidateTraits(IReadOnlyList<CharacterTrait> traits)
     {
         ArgumentNullException.ThrowIfNull(traits);
-        
+
         var validated = new List<CharacterTrait>(traits.Count);
         var seenKeys = new HashSet<string>();
 
         foreach (var trait in traits)
         {
             ArgumentNullException.ThrowIfNull(trait);
-            ArgumentException.ThrowIfNullOrWhiteSpace(trait.TraitKey);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(trait.TraitKey.Length, FieldLengths.KeyName);
+            ArgumentException.ThrowIfNullOrWhiteSpace(trait.TraitKey, nameof(trait.TraitKey));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(trait.TraitKey.Length, FieldLengths.Key, nameof(trait.TraitKey));
 
-            if (!seenKeys.Add(trait.TraitKey))   // Add returns false if the key was already there
+            if (!seenKeys.Add(trait.TraitKey))
             {
                 throw new ArgumentException($"Duplicate trait '{trait.TraitKey}'.", nameof(traits));
             }
@@ -210,12 +219,15 @@ public class Character
         foreach (var ability in abilities)
         {
             ArgumentNullException.ThrowIfNull(ability);
-            ArgumentException.ThrowIfNullOrWhiteSpace(ability.AbilityKey);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(ability.AbilityKey.Length, FieldLengths.KeyName);
-            
-            if(ability.AcquiredDate is not null) throw new ArgumentException($"Ability '{ability.AbilityKey}' has an AcquiredDate set. Abilities cannot have an acquired date in a draft.", nameof(abilities));
+            ArgumentException.ThrowIfNullOrWhiteSpace(ability.AbilityKey, nameof(ability.AbilityKey));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(ability.AbilityKey.Length, FieldLengths.Key);
 
-            if (!seenKeys.Add(ability.AbilityKey))   // Add returns false if the key was already there
+            if (ability.AcquiredDate is not null)
+            {
+                throw new ArgumentException($"Ability '{ability.AbilityKey}' has an AcquiredDate set. Abilities cannot have an acquired date in a draft.", nameof(abilities));
+            }
+
+            if (!seenKeys.Add(ability.AbilityKey))
             {
                 throw new ArgumentException($"Duplicate ability '{ability.AbilityKey}'.", nameof(abilities));
             }
