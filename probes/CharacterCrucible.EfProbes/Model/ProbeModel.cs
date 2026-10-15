@@ -72,7 +72,7 @@ public class ProbeCharacter
 
     public ProbeRequest RequestAdvancement(string targetKey, DateTimeOffset now)
     {
-        var inFlight = _requests.Where(r => r.Status == ProbeRequestStatus.Submitted).ToList();
+        var inFlight = _requests.Where(r => r.Status == ProbeRequestStatus.Queued).ToList();
         if (inFlight.Count >= 2)
         {
             throw new InvalidOperationException("At most two requests in flight.");
@@ -91,7 +91,7 @@ public class ProbeCharacter
 
 public enum ProbeRequestStatus
 {
-    Submitted = 1,
+    Queued = 1,
     Applied = 2,
 }
 
@@ -105,7 +105,7 @@ public class ProbeRequest
     public Guid Id { get; private set; }
     public Guid CharacterId { get; private set; }
     public string TargetKey { get; private set; } = null!;
-    public ProbeRequestStatus Status { get; private set; } = ProbeRequestStatus.Submitted;
+    public ProbeRequestStatus Status { get; private set; } = ProbeRequestStatus.Queued;
 
     public void MarkApplied() => Status = ProbeRequestStatus.Applied;
 }

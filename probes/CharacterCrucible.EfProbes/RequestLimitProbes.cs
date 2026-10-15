@@ -32,7 +32,7 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
 
     private static Task<ProbeCharacter> LoadWithInFlightAsync(ProbeDbContext db, Guid id) =>
         db.Characters
-            .Include(c => EF.Property<IList<ProbeRequest>>(c, "_requests").Where(r => r.Status == ProbeRequestStatus.Submitted))
+            .Include(c => EF.Property<IList<ProbeRequest>>(c, "_requests").Where(r => r.Status == ProbeRequestStatus.Queued))
             .SingleAsync(c => c.Id == id);
 
     private async Task<int> RequestCountAsync(Guid id)
