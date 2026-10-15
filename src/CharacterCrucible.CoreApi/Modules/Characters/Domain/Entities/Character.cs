@@ -38,6 +38,7 @@ public class Character
     public int UnspentXp { get; private set; }
     private readonly IList<XpLedgerEntry> _xpLedgerEntries = [];
     public DateTimeOffset CreatedDate { get; private set; }
+    public DateTimeOffset? LastRequestSubmittedAt { get; private set; }
 
     public void Approve(TimeProvider timeProvider)
     {
