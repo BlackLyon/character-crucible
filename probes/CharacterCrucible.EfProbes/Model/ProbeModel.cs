@@ -63,6 +63,51 @@ public class ProbeCharacter
         UnspentXp -= amount;
         _xpLedgerEntries.Add(new ProbeLedgerEntry(-amount, TotalEarnedXp, UnspentXp));
     }
+
+    /// <summary>Written on every submission so the Character row changes and RowVersion guards the limit.</summary>
+    public DateTimeOffset? LastRequestSubmittedAt { get; private set; }
+
+    // Loaded filtered to in-flight requests only; never the request history.
+    private readonly IList<ProbeRequest> _requests = [];
+
+    public ProbeRequest RequestAdvancement(string targetKey, DateTimeOffset now)
+    {
+        var inFlight = _requests.Where(r => r.Status == ProbeRequestStatus.Submitted).ToList();
+        if (inFlight.Count >= 2)
+        {
+            throw new InvalidOperationException("At most two requests in flight.");
+        }
+        if (inFlight.Any(r => r.TargetKey == targetKey))
+        {
+            throw new InvalidOperationException("A request for this item is already in flight.");
+        }
+
+        var request = new ProbeRequest(targetKey);
+        _requests.Add(request);
+        LastRequestSubmittedAt = now;
+        return request;
+    }
+}
+
+public enum ProbeRequestStatus
+{
+    Submitted = 1,
+    Applied = 2,
+}
+
+/// <summary>Stand-in for AdvancementRequest: just what the in-flight limit touches.</summary>
+public class ProbeRequest
+{
+    public ProbeRequest(string targetKey) => TargetKey = targetKey;
+
+    private ProbeRequest() { }
+
+    public Guid Id { get; private set; }
+    public Guid CharacterId { get; private set; }
+    public string TargetKey { get; private set; } = null!;
+    public ProbeRequestStatus Status { get; private set; } = ProbeRequestStatus.Submitted;
+
+    public void MarkApplied() => Status = ProbeRequestStatus.Applied;
 }
 
 /// <summary>Stand-in for XpLedgerEntry: one row per XP transaction, with running balances.</summary>
@@ -126,6 +171,16 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
         });
 
         modelBuilder.Entity<ProbeLedgerEntry>().ToTable("xp_ledger_entry");
+
+        modelBuilder.Entity<ProbeCharacter>()
+            .HasMany<ProbeRequest>("_requests").WithOne().HasForeignKey(r => r.CharacterId);
+
+        modelBuilder.Entity<ProbeRequest>(e =>
+        {
+            e.ToTable("advancement_request");
+            // The database refuses a second in-flight request for one item, whatever the code does.
+            e.HasIndex(r => new { r.CharacterId, r.TargetKey }).IsUnique().HasFilter("status = 1");
+        });
 
         modelBuilder.Entity<CountedCharacter>(e =>
         {

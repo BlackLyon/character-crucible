@@ -27,6 +27,10 @@ protects, and revisit the decision. Do not edit the probe until green.
 | `A_field_only_navigation_maps…` | The XP ledger is a navigation on `Character` with **no public getter**, so an unloaded collection can never be misread as no history; history is read by its own query | `Character` EF configuration; the XP history read |
 | `Adding_to_the_unloaded_ledger…` | `Character` writes ledger entries through the private field: one INSERT, no history read | `Character`'s XP mutators |
 | `A_losing_concurrent_spend_rolls_back…` | The totals on `Character` and the ledger row commit or roll back together, because they share one `SaveChanges` | Any XP write split across two saves |
+| `A_filtered_include_on_the_private_navigation…` | `Character` loads only its **in-flight** requests through a private navigation, never the request history | The submission limit check |
+| `Two_racing_submissions_cannot_both_pass…` | Every submission writes `Character.LastRequestSubmittedAt`, so `RowVersion` stops a racing second submission exceeding two in flight. Without the write, both pass | `Character.RequestAdvancement` |
+| `The_index_refuses_a_second_in_flight_request…` | A partial unique index refuses a duplicate in-flight request for one item, even around the entity | The request EF configuration |
+| `The_index_allows_the_same_item_again…` | The index is filtered to in-flight statuses, so a finished request does not block a new one | The index filter |
 
 ## Adding a probe
 
