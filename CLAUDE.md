@@ -1,7 +1,7 @@
 # Character Crucible — working notes for Claude
 
 A system-agnostic character manager for tabletop RPGs. Players submit advancement requests;
-most are applied automatically, the gated ones go to a storyteller. Game rules live in data.
+most are applied automatically, the gated ones go to a narrator. Game rules live in data.
 
 ## Read these before doing anything
 

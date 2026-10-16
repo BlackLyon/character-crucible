@@ -4,7 +4,7 @@ A character creation and advancement manager for tabletop RPGs.
 
 Players create characters and submit advancement requests — spend XP to raise a trait or
 acquire a power. Most are evaluated and applied automatically; the exceptional ones are
-routed to a storyteller, who can also correct a sheet directly when something has gone
+routed to a narrator, who can also correct a sheet directly when something has gone
 wrong. The rules — what traits exist, what they cost, what gates them — are data rather
 than code, so a table's houserules and errata change by publishing a new ruleset version
 rather than by deploying.
@@ -58,26 +58,26 @@ allowed?" has an answer that can be replayed.
 ## Approval is the exception, not the rule
 
 Waiting on a human to approve a single point of Strength would make this worse than a
-spreadsheet. So the worker applies routine advancement automatically, and storytellers
+spreadsheet. So the worker applies routine advancement automatically, and narrators
 see only two kinds of thing:
 
 - **Escalations.** Some definitions are gated — a rare or powerful ability that should not
   be handed out casually. Whether something is gated is a property of the *ruleset*, so a
-  storyteller changes it by publishing a new version, not by anyone shipping code.
+  narrator changes it by publishing a new version, not by anyone shipping code.
 - **Corrections.** When a sheet is wrong — a defect, a failed call, state left half-applied
-  — a storyteller or admin edits it directly.
+  — a narrator or admin edits it directly.
 
 Correction is a **break-glass path**: it bypasses the rules engine, because it exists
 precisely for when the rules engine produced bad state. So every manual edit is audited with
 a required reason, and overrides are marked on the character's history as distinct from
 advancement earned through the pipeline. An unaudited break-glass path is indistinguishable
-from a storyteller quietly buffing a friend's character.
+from a narrator quietly buffing a friend's character.
 
 ## Architecture
 
 ```
 Angular SPA
-     │  (Entra ID — Player / Storyteller / Admin)
+     │  (Entra ID — Player / Narrator / Admin)
      ▼
   Core API ──────── Service Bus ────────► Worker
  (characters,                               │
@@ -92,10 +92,10 @@ Angular SPA
 ```
 
 Three deployables. Service-to-service calls carry Entra ID app tokens; the same mechanism
-provides the Player / Storyteller / Admin roles for users.
+provides the Player / Narrator / Admin roles for users.
 
 The worker **re-validates at apply time** rather than trusting the earlier decision — the
-character may have moved on since, and for an escalated request sitting in a storyteller's
+character may have moved on since, and for an escalated request sitting in a narrator's
 queue the gap is days, during which the ruleset itself may have been republished.
 
 ## Stack
