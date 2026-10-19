@@ -11,4 +11,5 @@ internal static class FieldLengths
     internal const int Reason = 250;
     internal const int Race = 20;
     internal const int Key = 100;
+    internal const int EngineVersion = 100;
 }

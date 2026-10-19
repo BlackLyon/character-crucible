@@ -1,11 +1,40 @@
-﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
+using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 
 namespace CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 
 public class AdvancementRequest
 {
-    public AdvancementRequest(Guid characterId, int requestedXp, string reason)
+    private AdvancementRequest(Guid submittedBy, TimeProvider timeProvider, TargetKind targetKind, string targetKey, int? targetRating, int quotedCost, Guid evaluatedRulesetVersionId, string evaluatedEngineVersion, bool requiresApproval)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(evaluatedEngineVersion);
+        ArgumentOutOfRangeException.ThrowIfNegative(quotedCost, nameof(quotedCost));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(targetKey.Length, FieldLengths.Key, nameof(targetKey));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(evaluatedEngineVersion.Length, FieldLengths.EngineVersion, nameof(evaluatedEngineVersion));
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        SubmittedBy = submittedBy;
+        SubmittedDate = timeProvider.GetUtcNow();
+        TargetKind = targetKind;
+        TargetKey = targetKey;
+        TargetRating = targetRating;
+        QuotedCost = quotedCost;
+        EvaluatedRulesetVersionId = evaluatedRulesetVersionId;
+        EvaluatedEngineVersion = evaluatedEngineVersion;
+        RequestStatus = requiresApproval ? RequestStatus.PendingApproval : RequestStatus.Queued;
+    }
+
+    internal static AdvancementRequest ForTrait(Guid submittedBy, TimeProvider timeProvider, string traitKey, int targetRating, int quotedCost, Guid rulesetVersionId, string engineVersion, bool requiresApproval)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(targetRating);   // the trait-only rule
+
+        return new AdvancementRequest(submittedBy, timeProvider, TargetKind.Trait, traitKey, targetRating, quotedCost, rulesetVersionId, engineVersion, requiresApproval);
+    }
+
+    internal static AdvancementRequest ForAbility(Guid submittedBy, TimeProvider timeProvider, string abilityKey, int quotedCost, Guid rulesetVersionId, string engineVersion, bool requiresApproval)
+    {
+        return new AdvancementRequest(submittedBy, timeProvider, TargetKind.Ability, abilityKey, null, quotedCost, rulesetVersionId, engineVersion, requiresApproval);
     }
 
     private AdvancementRequest() { }
