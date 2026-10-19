@@ -7,9 +7,7 @@ public enum AuditAction
     CharacterApproved = 2,
     ManualEdit = 3,
     Refunded = 4,
-    RequestApproved = 5,
-    RequestRejected = 6,
-    StatusChanged = 7,
-    StoryGrant = 8,
-    XpGranted = 9
+    StatusChanged = 5,
+    StoryGrant = 6,
+    XpGranted = 7
 }

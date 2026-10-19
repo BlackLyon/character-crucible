@@ -52,4 +52,6 @@ public class AdvancementRequest
     public RequestStatus RequestStatus { get; private set; }
     public DateTimeOffset? ResolvedDate { get; private set; }
     public string? ResolutionReason { get; private set; }
+    public Guid? ReviewedBy { get; private set; }
+    public DateTimeOffset? ReviewedDate { get; private set; }
 }
