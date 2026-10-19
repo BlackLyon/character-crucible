@@ -9,11 +9,10 @@ namespace CharacterCrucible.CoreApi.Persistence;
 /// Postgres schema.
 /// </summary>
 /// <remarks>
-/// One context rather than one per module because the advancement apply flow writes Character,
-/// XpLedgerEntry and AuditEntry in a single transaction, which spans two modules. Separate
-/// contexts can share a transaction via a shared connection, but they cannot express a
-/// cross-module foreign key — and the apply-time version check assumes that pointer is valid.
-/// See notes/stage-1-ef-config.md for the measurements behind that.
+/// One context rather than one per module because Character.RulesetVersionId points into the
+/// Rulesets module, and separate contexts cannot express a cross-module foreign key — the
+/// apply-time version check assumes that pointer is valid. See notes/stage-1-ef-config.md for the
+/// measurements behind that.
 /// <para>
 /// This type is the one place allowed to depend on every module, so the architecture test's
 /// module-boundary rule has to exempt the persistence layer rather than forbid all outside
