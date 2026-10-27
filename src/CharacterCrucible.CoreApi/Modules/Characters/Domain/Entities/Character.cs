@@ -1,4 +1,6 @@
-﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
+﻿using System.Net.NetworkInformation;
+
+using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Inputs;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
@@ -34,13 +36,14 @@ public class Character
     public IReadOnlyCollection<CharacterTrait> Traits => _traits.AsReadOnly();
     private readonly IList<CharacterAbility> _abilities = [];
     public IReadOnlyCollection<CharacterAbility> Abilities => _abilities.AsReadOnly();
+    private readonly IList<AuditEntry> _auditEntries = [];   // write-only, no getter, like _xpLedgerEntries
     public int TotalEarnedXp { get; private set; }
     public int UnspentXp { get; private set; }
     private readonly IList<XpLedgerEntry> _xpLedgerEntries = [];
     public DateTimeOffset CreatedDate { get; private set; }
     public DateTimeOffset? LastRequestSubmittedAt { get; private set; }
 
-    public void Approve(TimeProvider timeProvider)
+    public void Approve(Actor actor, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
         if (Status != CharacterStatus.PendingApproval)
@@ -49,6 +52,7 @@ public class Character
         }
 
         var approvedAt = timeProvider.GetUtcNow();
+        RecordAudit(actor, AuditAction.CharacterApproved, StatusChange(CharacterStatus.PendingApproval, CharacterStatus.Active), "Character approved", timeProvider);
 
         for (var i = 0; i < _abilities.Count; i++)
         {
@@ -68,7 +72,7 @@ public class Character
         Status = CharacterStatus.Draft;
     }
 
-    public void RemoveFromPlay(CharacterStatus status, string reason)
+    public void RemoveFromPlay(Actor actor, CharacterStatus status, string reason, TimeProvider timeProvider)
     {
         if (Status != CharacterStatus.Active)
         {
@@ -80,16 +84,19 @@ public class Character
             throw new ArgumentOutOfRangeException(nameof(status), status, $"Invalid character status for removal from play. Must be {CharacterStatus.Banned}, {CharacterStatus.Dead}, or {CharacterStatus.Retired}.");
         }
 
+        RecordAudit(actor, AuditAction.StatusChanged, StatusChange(CharacterStatus.Active, status), reason, timeProvider);
         Status = status;
     }
 
-    public void ReturnToPlay()
+    public void ReturnToPlay(Actor actor, string reason, TimeProvider timeProvider)
     {
         if (Status != CharacterStatus.Banned && Status != CharacterStatus.Dead && Status != CharacterStatus.Retired)
         {
             throw new InvalidOperationException($"Cannot return a character to play that is not in the {CharacterStatus.Banned}, {CharacterStatus.Dead}, or {CharacterStatus.Retired} status.");
         }
 
+        var previous = Status;
+        RecordAudit(actor, AuditAction.StatusChanged, StatusChange(previous, CharacterStatus.Active), reason, timeProvider);
         Status = CharacterStatus.Active;
     }
 
@@ -123,7 +130,7 @@ public class Character
         Status = CharacterStatus.Draft;
     }
 
-    public void GrantXp(int amount, string reason, TimeProvider timeProvider)
+    public void GrantXp(Actor actor, int amount, string reason, TimeProvider timeProvider)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount, nameof(amount));
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
@@ -134,10 +141,17 @@ public class Character
             throw new InvalidOperationException($"Cannot grant XP to a character that is not in the {CharacterStatus.Active} status.");
         }
 
-        TotalEarnedXp += amount;
-        UnspentXp += amount;
+        var previousTotal = TotalEarnedXp;
+        var previousUnspent = UnspentXp;
+        var newTotalEarnedXp = TotalEarnedXp + amount;
+        var newUnspentXp = UnspentXp + amount;
+        var ledgerEntry = new XpLedgerEntry(amount, newTotalEarnedXp, newUnspentXp, reason, null, timeProvider);
 
-        _xpLedgerEntries.Add(new XpLedgerEntry(amount, TotalEarnedXp, UnspentXp, reason, null, timeProvider));
+        RecordAudit(actor, AuditAction.XpGranted, XpChange(amount, previousTotal, newTotalEarnedXp, previousUnspent, newUnspentXp), reason, timeProvider);
+
+        TotalEarnedXp = newTotalEarnedXp;
+        UnspentXp = newUnspentXp;
+        _xpLedgerEntries.Add(ledgerEntry);
     }
 
     public void UpdateDraft(CharacterDraft draft)
@@ -237,4 +251,18 @@ public class Character
 
         return validated;
     }
+
+    private void RecordAudit(Actor actor, AuditAction action, AuditChange change, string? reason, TimeProvider timeProvider, Guid? requestId = null, string? engineVersion = null)
+    {
+        _auditEntries.Add(new AuditEntry(actor, action, change, reason, requestId, RulesetVersionId, engineVersion, timeProvider));
+    }
+
+    private static AuditChange StatusChange(CharacterStatus from, CharacterStatus to) =>
+    new($"Status changed from {from} to {to}", [new ChangeEntry("status", "Status", from.ToString(), to.ToString())]);
+
+    private static AuditChange XpChange(int amount, int totalXpBefore, int totalXpAfter, int unspentXpBefore, int unspentXpAfter) =>
+        new($"Character gained experience points.  Amount gained {amount}.  Total Earned XP from {totalXpBefore} to {totalXpAfter}.  Total Unspent XP from {unspentXpBefore} to {unspentXpAfter}.",
+            [new ChangeEntry("totalXp", "Total Earned Xp", totalXpBefore.ToString(), totalXpAfter.ToString()), new ChangeEntry("unspentXp", "Unspent Xp", unspentXpBefore.ToString(), unspentXpAfter.ToString())]);
+
+
 }
