@@ -42,6 +42,7 @@ public class Character
     private readonly IList<XpLedgerEntry> _xpLedgerEntries = [];
     public DateTimeOffset CreatedDate { get; private set; }
     public DateTimeOffset? LastRequestSubmittedAt { get; private set; }
+    private readonly IList<AdvancementRequest> _requests = [];
 
     public void Approve(Actor actor, TimeProvider timeProvider)
     {
@@ -164,6 +165,17 @@ public class Character
         ApplyDraft(draft);
     }
 
+    /// <summary>Accepts a new advancement request. Requires in-flight requests to be loaded.</summary>
+    public void SubmitRequest(AdvancementRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        CheckRequest(request);
+
+        LastRequestSubmittedAt = request.SubmittedDate;
+
+        _requests.Add(request);
+    }
+
     private void ApplyDraft(CharacterDraft draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
@@ -264,5 +276,28 @@ public class Character
         new($"Character gained experience points.  Amount gained {amount}.  Total Earned XP from {totalXpBefore} to {totalXpAfter}.  Total Unspent XP from {unspentXpBefore} to {unspentXpAfter}.",
             [new ChangeEntry("totalXp", "Total Earned Xp", totalXpBefore.ToString(), totalXpAfter.ToString()), new ChangeEntry("unspentXp", "Unspent Xp", unspentXpBefore.ToString(), unspentXpAfter.ToString())]);
 
+    private void CheckRequest(AdvancementRequest request)
+    {
+        var inFlight = _requests.Where(r => r.IsInFlight).ToList();
 
+        if (Status != CharacterStatus.Active)
+        {
+            throw new InvalidOperationException($"Cannot create an advancement request for a character not in {CharacterStatus.Active} status.");
+        }
+
+        if (inFlight.Count >= 2)
+        {
+            throw new InvalidOperationException("Not able to submit the request.  The character already has 2 requests pending.");
+        }
+
+        if (inFlight.Any(r => r.TargetKind == request.TargetKind && r.TargetKey == request.TargetKey))
+        {
+            throw new InvalidOperationException("This request is already pending and cannot be submitted again.");
+        }
+
+        if (UnspentXp - inFlight.Sum(r => r.QuotedCost) < request.QuotedCost)
+        {
+            throw new InvalidOperationException("This request cannot be completed as the character does not have enough XP.");
+        }
+    }
 }

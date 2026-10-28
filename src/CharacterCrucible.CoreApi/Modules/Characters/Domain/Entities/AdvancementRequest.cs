@@ -54,4 +54,5 @@ public class AdvancementRequest
     public string? ResolutionReason { get; private set; }
     public Guid? ReviewedBy { get; private set; }
     public DateTimeOffset? ReviewedDate { get; private set; }
+    public bool IsInFlight => RequestStatus is RequestStatus.Queued or RequestStatus.PendingApproval or RequestStatus.Approved;
 }
