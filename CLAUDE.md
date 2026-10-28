@@ -33,8 +33,9 @@ restart the debate.
   character, a proposed advancement and a ruleset version, it answers *legal · cost · needs a
   human*. If it needs to query, the boundary is wrong — collapse it into the Core API.
 - **Modules never reference each other's internal types.** The Core API is a modular
-  monolith; `Characters`, `Rulesets` and `Advancement` are folders that talk through
-  contracts. See `src/CharacterCrucible.CoreApi/Modules/README.md`.
+  monolith; `Characters` and `Rulesets` are folders that talk through contracts.
+  Advancement lives inside `Characters` — folded in, not a third module. See
+  `src/CharacterCrucible.CoreApi/Modules/README.md`.
 - **No users or permissions service.** Entra owns identity and coarse roles. Fine-grained
   access is `AuthorizationHandler<TRequirement, TResource>` in the Core API.
 - **Rulesets are data, not code.** No DSL, no expression language.
