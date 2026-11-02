@@ -55,4 +55,85 @@ public class AdvancementRequest
     public Guid? ReviewedBy { get; private set; }
     public DateTimeOffset? ReviewedDate { get; private set; }
     public bool IsInFlight => RequestStatus is RequestStatus.Queued or RequestStatus.PendingApproval or RequestStatus.Approved;
+
+    public void Approve(Guid reviewer, TimeProvider timeProvider)
+    {
+        if (RequestStatus is not RequestStatus.PendingApproval)
+        {
+            throw new InvalidOperationException($"Cannot approve a request that is not pending approval. Current status: {RequestStatus}");
+        }
+
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        ReviewedBy = reviewer;
+        ReviewedDate = timeProvider.GetUtcNow();
+        RequestStatus = RequestStatus.Approved;
+    }
+
+    public void Reject(Guid reviewer, string reason, TimeProvider timeProvider)
+    {
+        if (RequestStatus is not RequestStatus.PendingApproval)
+        {
+            throw new InvalidOperationException($"Cannot reject a request that is not pending approval. Current status: {RequestStatus}");
+        }
+
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
+
+        ReviewedBy = reviewer;
+        ResolutionReason = reason;
+        ReviewedDate = ResolvedDate = timeProvider.GetUtcNow();
+        RequestStatus = RequestStatus.Rejected;
+    }
+
+    public void MarkApplied(TimeProvider timeProvider)
+    {
+        if (RequestStatus is not (RequestStatus.Queued or RequestStatus.Approved))
+        {
+            throw new InvalidOperationException($"Cannot mark a request as applied that is not either approved or queued. Current status: {RequestStatus}");
+        }
+        
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        ResolvedDate = timeProvider.GetUtcNow();
+        RequestStatus = RequestStatus.Applied;
+    }
+
+    public void MarkFailed(string reason, TimeProvider timeProvider)
+    {
+        if (RequestStatus is not (RequestStatus.Queued or RequestStatus.Approved))
+        {
+            throw new InvalidOperationException($"Cannot mark a request as failed that is not either approved or queued. Current status: {RequestStatus}");
+        }
+
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
+        
+        ResolutionReason = reason;
+        ResolvedDate = timeProvider.GetUtcNow();
+        RequestStatus = RequestStatus.Failed;
+    }
+
+    public void MarkAbandoned(string reason, TimeProvider timeProvider)
+    {
+        if (RequestStatus is RequestStatus.PendingApproval)
+        {
+            throw new InvalidOperationException($"Cannot mark a request as abandoned that is pending approval. Current status: {RequestStatus}");
+        }
+
+        if (!IsInFlight)
+        {
+            return; // already resolved, nothing to do
+        }
+
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
+        
+        ResolutionReason = reason;
+        ResolvedDate = timeProvider.GetUtcNow();
+        RequestStatus = RequestStatus.Abandoned;
+    }
 }
