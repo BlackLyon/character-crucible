@@ -1,6 +1,4 @@
-﻿using System.Net.NetworkInformation;
-
-using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
+﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Inputs;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
@@ -176,6 +174,93 @@ public class Character
         _requests.Add(request);
     }
 
+    public void ApplyAdvancement(Actor actor, AdvancementRequest request, string engineVersion, TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(engineVersion);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(engineVersion.Length, FieldLengths.EngineVersion, nameof(engineVersion));
+
+        if (request.CharacterId != Id)
+        {
+            throw new InvalidOperationException("The request does not belong to this character.");
+        }
+
+        if (Status is not CharacterStatus.Active)
+        {
+            throw new InvalidOperationException($"Cannot apply the request to a character not in the {CharacterStatus.Active} status");
+        }
+
+        if (!request.EvaluatedRulesetVersionId.Equals(RulesetVersionId))
+        {
+            throw new InvalidOperationException("The request was evaluated against a different ruleset version than the character's current ruleset version.");
+        }
+
+        if (UnspentXp < request.QuotedCost)
+        {
+            throw new InvalidOperationException("The request cannot be applied because the character does not have enough unspent XP.");
+        }
+
+        var oldRating = 0;
+        var newRating = 0;
+        var trait = _traits.FirstOrDefault(t => t.TraitKey == request.TargetKey);
+
+        switch (request.TargetKind)
+        {
+            case TargetKind.Trait:
+                var targetRating = request.TargetRating ?? throw new InvalidOperationException("The request cannot be applied because the target rating is not specified for a trait advancement.");
+
+                if (trait is not null && trait.Rating >= targetRating)
+                {
+                    throw new InvalidOperationException($"The request cannot be applied because the character's trait '{request.TargetKey}' already has a rating of {trait.Rating}, which is greater than or equal to the requested rating of {targetRating}.");
+                }
+
+                oldRating = trait?.Rating ?? 0;
+                newRating = targetRating;
+                break;
+
+            case TargetKind.Ability:
+                var ability = _abilities.FirstOrDefault(a => a.AbilityKey == request.TargetKey);
+
+                if (ability is not null)
+                {
+                    throw new InvalidOperationException($"The request cannot be applied because the character already possesses the ability '{request.TargetKey}'.");
+                }
+                break;
+
+            default:
+                throw new InvalidOperationException($"The request cannot be applied because the target kind '{request.TargetKind}' is not supported.");
+        }
+
+        var newUnspentXp = UnspentXp - request.QuotedCost;
+        var ledgerEntry = new XpLedgerEntry(-request.QuotedCost, TotalEarnedXp, newUnspentXp, $"Advancement: {request.TargetKey}", request.Id, timeProvider);
+
+        RecordAudit(actor, AuditAction.AdvancementApplied, AdvancementChange(request.TargetKind, request.TargetKey, request.QuotedCost, oldRating, newRating), null, timeProvider, request.Id, engineVersion);
+
+        UnspentXp = newUnspentXp;
+
+        if (request.TargetKind == TargetKind.Trait)
+        {
+            var updated = new CharacterTrait(request.TargetKey, newRating);
+
+            if (trait is null)
+            {
+                _traits.Add(updated);
+            }
+            else
+            {
+                _traits[_traits.IndexOf(trait)] = updated;
+            }
+        }
+        else if (request.TargetKind == TargetKind.Ability)
+        {
+            _abilities.Add(new CharacterAbility(request.TargetKey, timeProvider.GetUtcNow()));
+        }
+
+        _xpLedgerEntries.Add(ledgerEntry);
+    }
+
     private void ApplyDraft(CharacterDraft draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
@@ -224,6 +309,7 @@ public class Character
             ArgumentNullException.ThrowIfNull(trait);
             ArgumentException.ThrowIfNullOrWhiteSpace(trait.TraitKey, nameof(trait.TraitKey));
             ArgumentOutOfRangeException.ThrowIfGreaterThan(trait.TraitKey.Length, FieldLengths.Key, nameof(trait.TraitKey));
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(trait.Rating, nameof(trait.Rating));
 
             if (!seenKeys.Add(trait.TraitKey))
             {
@@ -275,6 +361,25 @@ public class Character
     private static AuditChange XpChange(int amount, int totalXpBefore, int totalXpAfter, int unspentXpBefore, int unspentXpAfter) =>
         new($"Character gained experience points.  Amount gained {amount}.  Total Earned XP from {totalXpBefore} to {totalXpAfter}.  Total Unspent XP from {unspentXpBefore} to {unspentXpAfter}.",
             [new ChangeEntry("totalXp", "Total Earned Xp", totalXpBefore.ToString(), totalXpAfter.ToString()), new ChangeEntry("unspentXp", "Unspent Xp", unspentXpBefore.ToString(), unspentXpAfter.ToString())]);
+
+    private static AuditChange AdvancementChange(TargetKind kind, string targetKey, int quotedCost, int oldRating = 0, int targetRating = 0)
+    {
+        var changes = new List<ChangeEntry>();
+
+        switch(kind)
+        {
+            case TargetKind.Trait:
+                changes.Add(new ChangeEntry($"trait.{targetKey}", "Trait", oldRating.ToString(), targetRating.ToString()));
+                break;
+            case TargetKind.Ability:
+                changes.Add(new ChangeEntry($"ability.{targetKey}", "Ability", null, targetKey));
+                break;
+            default:
+                throw new InvalidOperationException($"Cannot track change for unsupported target kind '{kind}'.");
+        }
+
+        return new AuditChange($"Advancement applied for {kind} '{targetKey}' with quoted cost of {quotedCost}.", changes);
+    }
 
     private void CheckRequest(AdvancementRequest request)
     {
