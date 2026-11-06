@@ -10,6 +10,8 @@ public partial class Character
     public Character(Guid ownerId, Guid rulesetVersionId, CharacterDraft draft, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentOutOfRangeException.ThrowIfEqual(ownerId, Guid.Empty, nameof(ownerId));
+        ArgumentOutOfRangeException.ThrowIfEqual(rulesetVersionId, Guid.Empty, nameof(rulesetVersionId));
 
         OwnerId = ownerId;
         RulesetVersionId = rulesetVersionId;
@@ -41,6 +43,7 @@ public partial class Character
     public DateTimeOffset CreatedDate { get; private set; }
     public DateTimeOffset? LastRequestSubmittedAt { get; private set; }
     private readonly IList<AdvancementRequest> _requests = [];
+    private const int MaxRequestsInFlight = 2;
 
     private void RecordAudit(Actor actor, AuditAction action, AuditChange change, string? reason, TimeProvider timeProvider, Guid? requestId = null, string? engineVersion = null)
     {

@@ -1,4 +1,5 @@
-﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Constants;
+using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
 
 using static CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects.AuditChanges;
@@ -10,9 +11,10 @@ public partial class Character
     public void Approve(Actor actor, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
+
         if (Status != CharacterStatus.PendingApproval)
         {
-            throw new InvalidOperationException($"Cannot approve a character that is not in the {CharacterStatus.PendingApproval} status.");
+            throw new InvalidOperationException($"Cannot approve a character that is not in the {CharacterStatus.PendingApproval} status. Current status: {Status}.");
         }
 
         var approvedAt = timeProvider.GetUtcNow();
@@ -30,8 +32,11 @@ public partial class Character
     {
         if (Status != CharacterStatus.PendingApproval)
         {
-            throw new InvalidOperationException($"Cannot send back a character that is not in the {CharacterStatus.PendingApproval} status.");
+            throw new InvalidOperationException($"Cannot send back a character that is not in the {CharacterStatus.PendingApproval} status. Current status: {Status}.");
         }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
 
         Status = CharacterStatus.Draft;
     }
@@ -40,7 +45,7 @@ public partial class Character
     {
         if (Status != CharacterStatus.Active)
         {
-            throw new InvalidOperationException($"Cannot remove a character from play that is not in the {CharacterStatus.Active} status.");
+            throw new InvalidOperationException($"Cannot remove a character from play that is not in the {CharacterStatus.Active} status. Current status: {Status}.");
         }
 
         if (status != CharacterStatus.Banned && status != CharacterStatus.Dead && status != CharacterStatus.Retired)
@@ -56,7 +61,7 @@ public partial class Character
     {
         if (Status != CharacterStatus.Banned && Status != CharacterStatus.Dead && Status != CharacterStatus.Retired)
         {
-            throw new InvalidOperationException($"Cannot return a character to play that is not in the {CharacterStatus.Banned}, {CharacterStatus.Dead}, or {CharacterStatus.Retired} status.");
+            throw new InvalidOperationException($"Cannot return a character to play that is not in the {CharacterStatus.Banned}, {CharacterStatus.Dead}, or {CharacterStatus.Retired} status. Current status: {Status}.");
         }
 
         var previous = Status;
@@ -68,7 +73,7 @@ public partial class Character
     {
         if (Status != CharacterStatus.Draft)
         {
-            throw new InvalidOperationException($"Cannot submit a character for approval that is not in the {CharacterStatus.Draft} status.");
+            throw new InvalidOperationException($"Cannot submit a character for approval that is not in the {CharacterStatus.Draft} status. Current status: {Status}.");
         }
 
         Status = CharacterStatus.PendingApproval;
@@ -78,8 +83,11 @@ public partial class Character
     {
         if (Status != CharacterStatus.PendingApproval)
         {
-            throw new InvalidOperationException($"Cannot ban a character that is not in the {CharacterStatus.PendingApproval} status.");
+            throw new InvalidOperationException($"Cannot ban a character that is not in the {CharacterStatus.PendingApproval} status. Current status: {Status}.");
         }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
 
         Status = CharacterStatus.DraftBanned;
     }
@@ -88,8 +96,11 @@ public partial class Character
     {
         if (Status != CharacterStatus.DraftBanned)
         {
-            throw new InvalidOperationException($"Cannot unban a character that is not in the {CharacterStatus.DraftBanned} status.");
+            throw new InvalidOperationException($"Cannot unban a character that is not in the {CharacterStatus.DraftBanned} status. Current status: {Status}.");
         }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
 
         Status = CharacterStatus.Draft;
     }

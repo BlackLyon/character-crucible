@@ -13,6 +13,8 @@ public class AdvancementRequest
         ArgumentOutOfRangeException.ThrowIfGreaterThan(targetKey.Length, FieldLengths.Key, nameof(targetKey));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(evaluatedEngineVersion.Length, FieldLengths.EngineVersion, nameof(evaluatedEngineVersion));
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentOutOfRangeException.ThrowIfEqual(submittedBy, Guid.Empty, nameof(submittedBy));
+        ArgumentOutOfRangeException.ThrowIfEqual(evaluatedRulesetVersionId, Guid.Empty, nameof(evaluatedRulesetVersionId));
 
         SubmittedBy = submittedBy;
         SubmittedDate = timeProvider.GetUtcNow();
@@ -64,6 +66,7 @@ public class AdvancementRequest
         }
 
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentOutOfRangeException.ThrowIfEqual(reviewer, Guid.Empty, nameof(reviewer));
 
         ReviewedBy = reviewer;
         ReviewedDate = timeProvider.GetUtcNow();
@@ -78,6 +81,7 @@ public class AdvancementRequest
         }
 
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentOutOfRangeException.ThrowIfEqual(reviewer, Guid.Empty, nameof(reviewer));
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
 

@@ -19,6 +19,7 @@ public partial class Character
         _requests.Add(request);
     }
 
+    /// <summary>Applies a queued or approved request. The request must be loaded through this character's in-flight requests.</summary>
     public void ApplyAdvancement(Actor actor, AdvancementRequest request, string engineVersion, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(actor);
@@ -27,17 +28,18 @@ public partial class Character
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(engineVersion.Length, FieldLengths.EngineVersion, nameof(engineVersion));
 
-        if (request.CharacterId != Id)
+        // Membership, not ids: Id is Guid.Empty until persisted, so an id comparison passes vacuously in a unit test.
+        if (!_requests.Contains(request))
         {
             throw new InvalidOperationException("The request does not belong to this character.");
         }
 
         if (Status is not CharacterStatus.Active)
         {
-            throw new InvalidOperationException($"Cannot apply the request to a character not in the {CharacterStatus.Active} status");
+            throw new InvalidOperationException($"Cannot apply the request to a character not in the {CharacterStatus.Active} status. Current status: {Status}.");
         }
 
-        if (!request.EvaluatedRulesetVersionId.Equals(RulesetVersionId))
+        if (request.EvaluatedRulesetVersionId != RulesetVersionId)
         {
             throw new InvalidOperationException("The request was evaluated against a different ruleset version than the character's current ruleset version.");
         }
@@ -49,26 +51,26 @@ public partial class Character
 
         var oldRating = 0;
         var newRating = 0;
-        var trait = _traits.FirstOrDefault(t => t.TraitKey == request.TargetKey);
+        CharacterTrait? existingTrait = null;
 
         switch (request.TargetKind)
         {
             case TargetKind.Trait:
+                existingTrait = _traits.FirstOrDefault(t => t.TraitKey == request.TargetKey);
                 var targetRating = request.TargetRating ?? throw new InvalidOperationException("The request cannot be applied because the target rating is not specified for a trait advancement.");
 
-                if (trait is not null && trait.Rating >= targetRating)
+                if (existingTrait is not null && existingTrait.Rating >= targetRating)
                 {
-                    throw new InvalidOperationException($"The request cannot be applied because the character's trait '{request.TargetKey}' already has a rating of {trait.Rating}, which is greater than or equal to the requested rating of {targetRating}.");
+                    throw new InvalidOperationException($"The request cannot be applied because the character's trait '{request.TargetKey}' already has a rating of {existingTrait.Rating}, which is greater than or equal to the requested rating of {targetRating}.");
                 }
 
-                oldRating = trait?.Rating ?? 0;
+                oldRating = existingTrait?.Rating ?? 0;
                 newRating = targetRating;
                 break;
 
             case TargetKind.Ability:
-                var ability = _abilities.FirstOrDefault(a => a.AbilityKey == request.TargetKey);
 
-                if (ability is not null)
+                if (_abilities.Any(a => a.AbilityKey == request.TargetKey))
                 {
                     throw new InvalidOperationException($"The request cannot be applied because the character already possesses the ability '{request.TargetKey}'.");
                 }
@@ -89,13 +91,13 @@ public partial class Character
         {
             var updated = new CharacterTrait(request.TargetKey, newRating);
 
-            if (trait is null)
+            if (existingTrait is null)
             {
                 _traits.Add(updated);
             }
             else
             {
-                _traits[_traits.IndexOf(trait)] = updated;
+                _traits[_traits.IndexOf(existingTrait)] = updated;
             }
         }
         else if (request.TargetKind == TargetKind.Ability)
@@ -112,12 +114,12 @@ public partial class Character
 
         if (Status != CharacterStatus.Active)
         {
-            throw new InvalidOperationException($"Cannot create an advancement request for a character not in {CharacterStatus.Active} status.");
+            throw new InvalidOperationException($"Cannot create an advancement request for a character not in {CharacterStatus.Active} status. Current status: {Status}.");
         }
 
-        if (inFlight.Count >= 2)
+        if (inFlight.Count >= MaxRequestsInFlight)
         {
-            throw new InvalidOperationException("Not able to submit the request.  The character already has 2 requests pending.");
+            throw new InvalidOperationException($"Not able to submit the request.  The character already has {MaxRequestsInFlight} requests pending.");
         }
 
         if (inFlight.Any(r => r.TargetKind == request.TargetKind && r.TargetKey == request.TargetKey))

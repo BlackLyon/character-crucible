@@ -13,6 +13,7 @@ public class AuditEntry
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(change);
         ArgumentNullException.ThrowIfNull(actor);
+        ArgumentOutOfRangeException.ThrowIfEqual(actor.Id, Guid.Empty, nameof(actor.Id));
 
         if (ReasonRequired.Contains(action))
         {

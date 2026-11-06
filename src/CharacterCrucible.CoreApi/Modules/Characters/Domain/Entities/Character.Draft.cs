@@ -11,7 +11,7 @@ public partial class Character
     {
         if (Status != CharacterStatus.Draft)
         {
-            throw new InvalidOperationException($"Cannot update a character that is not in the {CharacterStatus.Draft} status.");
+            throw new InvalidOperationException($"Cannot update a character that is not in the {CharacterStatus.Draft} status. Current status: {Status}.");
         }
 
         ApplyDraft(draft);
@@ -53,7 +53,7 @@ public partial class Character
         }
     }
 
-    private List<CharacterTrait> ValidateTraits(IReadOnlyList<CharacterTrait> traits)
+    private static List<CharacterTrait> ValidateTraits(IReadOnlyList<CharacterTrait> traits)
     {
         ArgumentNullException.ThrowIfNull(traits);
 
@@ -78,7 +78,7 @@ public partial class Character
         return validated;
     }
 
-    private List<CharacterAbility> ValidateAbilities(IReadOnlyList<CharacterAbility> abilities)
+    private static List<CharacterAbility> ValidateAbilities(IReadOnlyList<CharacterAbility> abilities)
     {
         ArgumentNullException.ThrowIfNull(abilities);
 
@@ -89,7 +89,7 @@ public partial class Character
         {
             ArgumentNullException.ThrowIfNull(ability);
             ArgumentException.ThrowIfNullOrWhiteSpace(ability.AbilityKey, nameof(ability.AbilityKey));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(ability.AbilityKey.Length, FieldLengths.Key);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(ability.AbilityKey.Length, FieldLengths.Key, nameof(ability.AbilityKey));
 
             if (ability.AcquiredDate is not null)
             {
@@ -100,6 +100,7 @@ public partial class Character
             {
                 throw new ArgumentException($"Duplicate ability '{ability.AbilityKey}'.", nameof(abilities));
             }
+
             validated.Add(ability);
         }
 

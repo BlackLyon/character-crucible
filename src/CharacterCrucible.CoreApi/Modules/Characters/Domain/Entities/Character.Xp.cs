@@ -15,7 +15,7 @@ public partial class Character
 
         if (Status != CharacterStatus.Active)
         {
-            throw new InvalidOperationException($"Cannot grant XP to a character that is not in the {CharacterStatus.Active} status.");
+            throw new InvalidOperationException($"Cannot grant XP to a character that is not in the {CharacterStatus.Active} status. Current status: {Status}.");
         }
 
         var previousTotal = TotalEarnedXp;
