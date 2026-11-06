@@ -52,8 +52,8 @@ Green is not proof. Four kinds of breach are invisible to it, all measured:
   test needs an explicit allow-list of one namespace rather than a blanket prohibition.
 - **`public const` values**, which the compiler inlines, leaving no IL reference at all.
 - **Enum members cast to their underlying type** — `(int)SomeEnum.Value` compiles to a bare
-  numeric load with the type reference dropped. The nine enums are the most borrowable things
-  in the module.
+  numeric load with the type reference dropped. Enums are the most borrowable things in a
+  module, and both modules have several.
 - **Reflection and service-locator lookups by string.** Unavoidable with any IL-based tool.
 
 `NetArchTest.Rules` 1.3.2 was published in 2021, so these will not be fixed upstream.
@@ -76,6 +76,10 @@ Modules/Rulesets/
   Persistence/      EF configurations          (added when needed)
   Endpoints/        minimal API endpoints      (added when needed)
 ```
+
+`Characters` adds two kinds, each used only inside its module: `Constants/` (`FieldLengths`,
+shared by the guards and the EF configuration) and `Inputs/` (`CharacterDraft`, what a caller
+supplies to build or edit a sheet). Neither is a value object: neither is ever stored.
 
 Namespaces follow folders — `CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities`.
 

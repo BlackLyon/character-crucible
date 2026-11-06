@@ -11,7 +11,7 @@ Local only — `notes/` is gitignored and holds the real decision record:
 |---|---|
 | `notes/architecture-decision.md` | Why the system is shaped this way, the alternatives rejected, the falsifiers |
 | `notes/domain-design.md` | **The domain's reasoning.** What makes a character, the attribute and ability model, resolution, and which design questions are still open |
-| `notes/domain/` | **Entity specifications**, one file per module — what to actually write. Start at its README for build order and the entity/value-object convention |
+| `notes/domain/` | **Entity specifications** — `rulesets.md`, `characters.md`, `advancement.md` (part of `Characters`), plus `flows.md` for every use case on one page. What to actually write. Start at its README for build order and the entity/value-object convention |
 | `notes/plan.md` | Staged scope, ordered by value, and what is deliberately out |
 | `notes/process-rulesets-module.md` | After-action from the first module, and the process changes that follow from it |
 | `notes/<latest date>.md` | Where work stopped and what starts next |

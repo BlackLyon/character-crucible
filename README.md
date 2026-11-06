@@ -14,6 +14,23 @@ It runs a small original rule system, built for this project. It tracks what a c
 
 > **Status: in development.** Started September 2026. Not yet deployed.
 
+## What exists today
+
+The project is being built in stages, domain first. Nothing runs end to end yet.
+
+- **`Rulesets`:** written, mapped to Postgres with EF Core, and covered by a Testcontainers
+  round-trip test. That includes the two-phase publish of an immutable version.
+- **`Characters`:** the domain is written. That covers characters, their review and play status, XP
+  with a ledger and an audit trail, and advancement requests from submission to apply. Its EF
+  configuration and its tests are next. See
+  [its README](src/CharacterCrucible.CoreApi/Modules/Characters/README.md).
+- **EF probes:** a test project that pins down how EF Core and Npgsql behave, the facts the
+  persistence design depends on, before the real configuration relies on them. See
+  [probes/](probes/README.md).
+- **An architecture test** enforces the module boundaries.
+- **Not started:** endpoints, authentication, the message pipeline, the Rules evaluator, the
+  front end, and deployment.
+
 ## A note on scale, before anything else
 
 **This is deliberately more architecture than the problem needs.**
@@ -67,11 +84,13 @@ see only two kinds of thing:
 - **Corrections.** When a sheet is wrong — a defect, a failed call, state left half-applied
   — a narrator or admin edits it directly.
 
-Correction is a **break-glass path**: it bypasses the rules engine, because it exists
-precisely for when the rules engine produced bad state. So every manual edit is audited with
-a required reason, and overrides are marked on the character's history as distinct from
-advancement earned through the pipeline. An unaudited break-glass path is indistinguishable
-from a narrator quietly buffing a friend's character.
+Correction is a **break-glass path**: it is applied immediately rather than queued behind the
+worker, because it exists for when the pipeline produced bad state. It still answers to the
+rules, though: no narrator can set Strength to 47. That's a rule about valid state, not a
+permission check. Every manual edit is audited with a required reason, and is recorded in the
+character's history as a different kind of event from advancement earned through the pipeline.
+An unaudited break-glass path is indistinguishable from a narrator quietly buffing a friend's
+character. *Designed; not yet built.*
 
 ## Architecture
 
@@ -154,8 +173,10 @@ src/
   CharacterCrucible.Worker       Applies advancement; re-validates before it does.
   CharacterCrucible.Contracts    Types shared across the service boundary.
 tests/
-  CharacterCrucible.CoreApi.Tests
+  CharacterCrucible.CoreApi.Tests   Architecture, domain guard and Testcontainers persistence tests
   CharacterCrucible.Rules.Tests
+probes/
+  CharacterCrucible.EfProbes        What EF Core and Npgsql actually do, against stand-in types
 ```
 
 The Core API's modules are folders, not projects — see
