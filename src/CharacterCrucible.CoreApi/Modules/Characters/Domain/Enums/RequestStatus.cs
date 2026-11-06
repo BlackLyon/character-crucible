@@ -3,7 +3,7 @@
 // Numbered: persisted, so these values must survive a member being reordered.
 public enum RequestStatus
 {
-    Abandoned =1,
+    Abandoned = 1,
     Applied = 2,
     Approved = 3,
     Failed = 4,

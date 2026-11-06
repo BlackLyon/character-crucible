@@ -4,8 +4,18 @@ public record AuditChange
 {
     public AuditChange(string summary, IEnumerable<ChangeEntry> changes)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(summary);
+        ArgumentNullException.ThrowIfNull(changes);
+
+        var changeData = changes.ToList();
+
+        if (changeData.Count == 0)
+        {
+            throw new ArgumentException("An audit change must record at least one change.", nameof(changes));
+        }
+
         Summary = summary;
-        ChangeData = changes?.ToList() ?? new List<ChangeEntry>();
+        ChangeData = changeData;
     }
 
     // Not a positional record, and not collapsible to one: EF binds constructor parameters to

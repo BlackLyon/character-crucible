@@ -9,5 +9,5 @@ public enum CharacterStatus
     Draft = 4,
     DraftBanned = 5,
     PendingApproval = 6,
-    Retired = 7,
+    Retired = 7
 }

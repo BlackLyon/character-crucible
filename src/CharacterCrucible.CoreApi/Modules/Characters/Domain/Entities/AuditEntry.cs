@@ -4,9 +4,11 @@ using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
 
 namespace CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 
+/// <summary>One change to an active character: who made it, what changed, and under which ruleset. Player-facing history.</summary>
 public class AuditEntry
 {
     private static readonly HashSet<AuditAction> ReasonRequired = [AuditAction.StatusChanged, AuditAction.XpGranted, AuditAction.StoryGrant, AuditAction.ManualEdit, AuditAction.Refunded];
+    private static readonly HashSet<AuditAction> RulesRan = [AuditAction.AdvancementApplied, AuditAction.StoryGrant, AuditAction.ManualEdit, AuditAction.Refunded];
 
     internal AuditEntry(Actor actor, AuditAction action, AuditChange change, string? reason, Guid? advancementRequestId, Guid rulesetVersionId, string? engineVersion, TimeProvider timeProvider)
     {
@@ -30,9 +32,19 @@ public class AuditEntry
             throw new ArgumentOutOfRangeException(nameof(action), action, "Invalid audit action.");
         }
 
-        if (engineVersion is not null)
+        if (RulesRan.Contains(action))
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(engineVersion);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(engineVersion.Length, FieldLengths.EngineVersion, nameof(engineVersion));
+        }
+        else if (engineVersion is not null)
+        {
+            throw new ArgumentException($"{action} involves no Rules evaluation, so it records no engine version.", nameof(engineVersion));
+        }
+
+        if (action is AuditAction.AdvancementApplied && advancementRequestId is null)
+        {
+            throw new ArgumentException($"{action} must record the request it applied.", nameof(advancementRequestId));
         }
 
         if (reason is not null)
@@ -51,6 +63,7 @@ public class AuditEntry
         OccurredAt = timeProvider.GetUtcNow();
     }
 
+    /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>
     private AuditEntry() { }
 
     public Guid Id { get; private set; }

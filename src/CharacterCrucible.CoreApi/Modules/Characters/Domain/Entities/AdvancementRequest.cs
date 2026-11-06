@@ -3,6 +3,7 @@ using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 
 namespace CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 
+/// <summary>A player's request to buy one trait rating or ability, and the record of how it was decided.</summary>
 public class AdvancementRequest
 {
     private AdvancementRequest(Guid submittedBy, TimeProvider timeProvider, TargetKind targetKind, string targetKey, int? targetRating, int quotedCost, Guid evaluatedRulesetVersionId, string evaluatedEngineVersion, bool requiresApproval)
@@ -39,6 +40,7 @@ public class AdvancementRequest
         return new AdvancementRequest(submittedBy, timeProvider, TargetKind.Ability, abilityKey, null, quotedCost, rulesetVersionId, engineVersion, requiresApproval);
     }
 
+    /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>
     private AdvancementRequest() { }
 
     public Guid Id { get; private set; }
@@ -62,7 +64,7 @@ public class AdvancementRequest
     {
         if (RequestStatus is not RequestStatus.PendingApproval)
         {
-            throw new InvalidOperationException($"Cannot approve a request that is not pending approval. Current status: {RequestStatus}");
+            throw new InvalidOperationException($"Cannot approve a request that is not pending approval. Current status: {RequestStatus}.");
         }
 
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -77,7 +79,7 @@ public class AdvancementRequest
     {
         if (RequestStatus is not RequestStatus.PendingApproval)
         {
-            throw new InvalidOperationException($"Cannot reject a request that is not pending approval. Current status: {RequestStatus}");
+            throw new InvalidOperationException($"Cannot reject a request that is not pending approval. Current status: {RequestStatus}.");
         }
 
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -95,9 +97,9 @@ public class AdvancementRequest
     {
         if (RequestStatus is not (RequestStatus.Queued or RequestStatus.Approved))
         {
-            throw new InvalidOperationException($"Cannot mark a request as applied that is not either approved or queued. Current status: {RequestStatus}");
+            throw new InvalidOperationException($"Cannot mark a request as applied that is not either approved or queued. Current status: {RequestStatus}.");
         }
-        
+
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         ResolvedDate = timeProvider.GetUtcNow();
@@ -108,13 +110,13 @@ public class AdvancementRequest
     {
         if (RequestStatus is not (RequestStatus.Queued or RequestStatus.Approved))
         {
-            throw new InvalidOperationException($"Cannot mark a request as failed that is not either approved or queued. Current status: {RequestStatus}");
+            throw new InvalidOperationException($"Cannot mark a request as failed that is not either approved or queued. Current status: {RequestStatus}.");
         }
 
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
-        
+
         ResolutionReason = reason;
         ResolvedDate = timeProvider.GetUtcNow();
         RequestStatus = RequestStatus.Failed;
@@ -124,18 +126,18 @@ public class AdvancementRequest
     {
         if (RequestStatus is RequestStatus.PendingApproval)
         {
-            throw new InvalidOperationException($"Cannot mark a request as abandoned that is pending approval. Current status: {RequestStatus}");
+            throw new InvalidOperationException($"Cannot mark a request as abandoned that is pending approval. Current status: {RequestStatus}.");
         }
 
         if (!IsInFlight)
         {
-            return; // already resolved, nothing to do
+            return; // Idempotent: messages arrive at least once, so a dead-lettered one can be handled twice.
         }
 
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, FieldLengths.Reason, nameof(reason));
-        
+
         ResolutionReason = reason;
         ResolvedDate = timeProvider.GetUtcNow();
         RequestStatus = RequestStatus.Abandoned;

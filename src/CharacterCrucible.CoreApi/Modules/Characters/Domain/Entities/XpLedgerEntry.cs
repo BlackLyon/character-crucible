@@ -2,6 +2,7 @@
 
 namespace CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 
+/// <summary>One XP movement on a character, with the running balances after it. Append-only, written only through Character.</summary>
 public class XpLedgerEntry
 {
     internal XpLedgerEntry(int delta, int totalEarnedXpAfter, int unspentXpAfter, string reason, Guid? advancementRequestId, TimeProvider timeProvider)

@@ -6,17 +6,17 @@ namespace CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
 internal static class AuditChanges
 {
     internal static AuditChange StatusChange(CharacterStatus from, CharacterStatus to) =>
-    new($"Status changed from {from} to {to}", [new ChangeEntry("status", "Status", from.ToString(), to.ToString())]);
+        new($"Status changed from {from} to {to}.", [new ChangeEntry("status", "Status", from.ToString(), to.ToString())]);
 
     internal static AuditChange XpChange(int amount, int totalXpBefore, int totalXpAfter, int unspentXpBefore, int unspentXpAfter) =>
-        new($"Character gained experience points.  Amount gained {amount}.  Total Earned XP from {totalXpBefore} to {totalXpAfter}.  Total Unspent XP from {unspentXpBefore} to {unspentXpAfter}.",
-            [new ChangeEntry("totalXp", "Total Earned Xp", totalXpBefore.ToString(), totalXpAfter.ToString()), new ChangeEntry("unspentXp", "Unspent Xp", unspentXpBefore.ToString(), unspentXpAfter.ToString())]);
+        new($"Character gained experience points. Amount gained {amount}. Total Earned XP from {totalXpBefore} to {totalXpAfter}. Total Unspent XP from {unspentXpBefore} to {unspentXpAfter}.",
+            [new ChangeEntry("totalXp", "Total Earned XP", totalXpBefore.ToString(), totalXpAfter.ToString()), new ChangeEntry("unspentXp", "Unspent XP", unspentXpBefore.ToString(), unspentXpAfter.ToString())]);
 
     internal static AuditChange AdvancementChange(TargetKind kind, string targetKey, int quotedCost, int oldRating = 0, int targetRating = 0)
     {
         var changes = new List<ChangeEntry>();
 
-        switch(kind)
+        switch (kind)
         {
             case TargetKind.Trait:
                 changes.Add(new ChangeEntry($"trait.{targetKey}", "Trait", oldRating.ToString(), targetRating.ToString()));
