@@ -20,9 +20,9 @@ public partial class Character
     private void ApplyDraft(CharacterDraft draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
-        ArgumentException.ThrowIfNullOrWhiteSpace(draft.Name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(draft.Race);
-        ArgumentException.ThrowIfNullOrWhiteSpace(draft.ArchetypeKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(draft.Name, nameof(draft.Name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(draft.Race, nameof(draft.Race));
+        ArgumentException.ThrowIfNullOrWhiteSpace(draft.ArchetypeKey, nameof(draft.ArchetypeKey));
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(draft.Age, nameof(draft.Age));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(draft.Name.Length, FieldLengths.Name, nameof(draft.Name));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(draft.Race.Length, FieldLengths.Race, nameof(draft.Race));

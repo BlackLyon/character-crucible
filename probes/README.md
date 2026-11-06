@@ -28,9 +28,10 @@ protects, and revisit the decision. Do not edit the probe until green.
 | `Adding_to_the_unloaded_ledger…` | `Character` writes ledger entries through the private field: one INSERT, no history read | `Character`'s XP mutators |
 | `A_losing_concurrent_spend_rolls_back…` | The totals on `Character` and the ledger row commit or roll back together, because they share one `SaveChanges` | Any XP write split across two saves |
 | `A_filtered_include_on_the_private_navigation…` | `Character` loads only its **in-flight** requests through a private navigation, never the request history | The submission limit check |
-| `Two_racing_submissions_cannot_both_pass…` | Every submission writes `Character.LastRequestSubmittedAt`, so `RowVersion` stops a racing second submission exceeding two in flight. Without the write, both pass | `Character.SubmitRequest` |
-| `The_index_refuses_a_second_in_flight_request…` | A partial unique index refuses a duplicate in-flight request for one item, even around the entity | The request EF configuration |
-| `The_index_allows_the_same_item_again…` | The index is filtered to in-flight statuses, so a finished request does not block a new one | The index filter |
+| `Two_racing_submissions_cannot_both_pass…` | Every submission writes `Character.LastRequestSubmittedAt`, so `RowVersion` stops a racing second submission exceeding two in flight | `Character.SubmitRequest` |
+| `Without_the_timestamp_write…` | **The counter-case, measured:** without that write only request rows change, the character row is never updated, and both racing submissions pass. The one line in `SubmitRequest` carries the guarantee | `LastRequestSubmittedAt = …` in `Character.SubmitRequest` |
+| `In_flight_means_the_same_to_IsInFlight…` | One case per status, all seven: the filtered include, the partial unique index (raw SQL, around the entity) and `IsInFlight` agree on which statuses are in flight. The stand-in carries the real `RequestStatus` numbers, because the index filter is SQL over them. Broken on purpose to `Queued` only, it fails for `PendingApproval` and `Approved` | The include predicate and the index filter in the request EF configuration — both hand-written copies of `IsInFlight` |
+| `The_index_allows_a_trait_and_an_ability…` | The index includes `target_kind`, so a trait and an ability with the same key can be in flight together, as the domain allows | The index's columns |
 
 ## Adding a probe
 

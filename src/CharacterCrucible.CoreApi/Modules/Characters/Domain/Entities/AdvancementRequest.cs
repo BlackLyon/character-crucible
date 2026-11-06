@@ -8,8 +8,8 @@ public class AdvancementRequest
 {
     private AdvancementRequest(Guid submittedBy, TimeProvider timeProvider, TargetKind targetKind, string targetKey, int? targetRating, int quotedCost, Guid evaluatedRulesetVersionId, string evaluatedEngineVersion, bool requiresApproval)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(targetKey);
-        ArgumentException.ThrowIfNullOrWhiteSpace(evaluatedEngineVersion);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetKey, nameof(targetKey));
+        ArgumentException.ThrowIfNullOrWhiteSpace(evaluatedEngineVersion, nameof(evaluatedEngineVersion));
         ArgumentOutOfRangeException.ThrowIfNegative(quotedCost, nameof(quotedCost));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(targetKey.Length, FieldLengths.Key, nameof(targetKey));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(evaluatedEngineVersion.Length, FieldLengths.EngineVersion, nameof(evaluatedEngineVersion));
@@ -28,16 +28,16 @@ public class AdvancementRequest
         RequestStatus = requiresApproval ? RequestStatus.PendingApproval : RequestStatus.Queued;
     }
 
-    internal static AdvancementRequest ForTrait(Guid submittedBy, TimeProvider timeProvider, string traitKey, int targetRating, int quotedCost, Guid rulesetVersionId, string engineVersion, bool requiresApproval)
+    internal static AdvancementRequest ForTrait(Guid submittedBy, TimeProvider timeProvider, string targetKey, int targetRating, int quotedCost, Guid evaluatedRulesetVersionId, string evaluatedEngineVersion, bool requiresApproval)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(targetRating);   // the trait-only rule
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(targetRating, nameof(targetRating));   // the trait-only rule
 
-        return new AdvancementRequest(submittedBy, timeProvider, TargetKind.Trait, traitKey, targetRating, quotedCost, rulesetVersionId, engineVersion, requiresApproval);
+        return new AdvancementRequest(submittedBy, timeProvider, TargetKind.Trait, targetKey, targetRating, quotedCost, evaluatedRulesetVersionId, evaluatedEngineVersion, requiresApproval);
     }
 
-    internal static AdvancementRequest ForAbility(Guid submittedBy, TimeProvider timeProvider, string abilityKey, int quotedCost, Guid rulesetVersionId, string engineVersion, bool requiresApproval)
+    internal static AdvancementRequest ForAbility(Guid submittedBy, TimeProvider timeProvider, string targetKey, int quotedCost, Guid evaluatedRulesetVersionId, string evaluatedEngineVersion, bool requiresApproval)
     {
-        return new AdvancementRequest(submittedBy, timeProvider, TargetKind.Ability, abilityKey, null, quotedCost, rulesetVersionId, engineVersion, requiresApproval);
+        return new AdvancementRequest(submittedBy, timeProvider, TargetKind.Ability, targetKey, null, quotedCost, evaluatedRulesetVersionId, evaluatedEngineVersion, requiresApproval);
     }
 
     /// <summary>For EF materialisation only. Rows in the database have already been validated.</summary>

@@ -49,6 +49,11 @@ public partial class Character
             throw new InvalidOperationException("The request cannot be applied because the character does not have enough unspent XP.");
         }
 
+        if (request.RequestStatus != RequestStatus.Approved && request.RequestStatus != RequestStatus.Queued)
+        {
+            throw new InvalidOperationException($"The request cannot be applied because it is not in an {RequestStatus.Approved} or {RequestStatus.Queued} status. Current status: {request.RequestStatus}.");
+        }
+
         var oldRating = 0;
         var newRating = 0;
         CharacterTrait? existingTrait = null;
@@ -110,6 +115,11 @@ public partial class Character
 
     private void CheckRequest(AdvancementRequest request)
     {
+        if (request.RequestStatus is not (RequestStatus.Queued or RequestStatus.PendingApproval))
+        {
+            throw new InvalidOperationException($"This request cannot be submitted as it is already {request.RequestStatus}.");
+        }
+
         var inFlight = _requests.Where(r => r.IsInFlight).ToList();
 
         if (Status != CharacterStatus.Active)

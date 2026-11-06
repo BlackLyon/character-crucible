@@ -1,4 +1,5 @@
-﻿using CharacterCrucible.EfProbes.Model;
+﻿using System.Linq.Expressions;
+using CharacterCrucible.EfProbes.Model;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -13,17 +14,19 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 15, 9, 30, 0, TimeSpan.Zero);
 
-    private async Task<Guid> InsertAsync(params (string Key, bool Applied)[] requests)
+    // IsInFlight is computed, so EF can't translate it: the include needs its own copy, as the real one will.
+    private static readonly Expression<Func<ProbeRequest, bool>> InFlight = r =>
+        r.RequestStatus == ProbeRequestStatus.Queued
+        || r.RequestStatus == ProbeRequestStatus.PendingApproval
+        || r.RequestStatus == ProbeRequestStatus.Approved;
+
+    private async Task<Guid> InsertAsync(params (string Key, ProbeRequestStatus Status)[] requests)
     {
         await using var db = postgres.NewContext();
         var character = new ProbeCharacter("Requests");
-        foreach (var (key, applied) in requests)
+        foreach (var (key, status) in requests)
         {
-            var request = character.RequestAdvancement(key, Now);
-            if (applied)
-            {
-                request.MarkApplied();
-            }
+            character.SubmitRequest(ProbeTargetKind.Trait, key, Now).SetStatus(status);
         }
         db.Characters.Add(character);
         await db.SaveChangesAsync();
@@ -32,7 +35,7 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
 
     private static Task<ProbeCharacter> LoadWithInFlightAsync(ProbeDbContext db, Guid id) =>
         db.Characters
-            .Include(c => EF.Property<IList<ProbeRequest>>(c, "_requests").Where(r => r.Status == ProbeRequestStatus.Queued))
+            .Include(c => EF.Property<IList<ProbeRequest>>(c, "_requests").AsQueryable().Where(InFlight))
             .SingleAsync(c => c.Id == id);
 
     private async Task<int> RequestCountAsync(Guid id)
@@ -41,24 +44,60 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
         return await db.Set<ProbeRequest>().CountAsync(r => r.CharacterId == id);
     }
 
+    private Task InsertRawAsync(ProbeDbContext db, Guid characterId, ProbeTargetKind kind, string key) =>
+        db.Database.ExecuteSqlAsync(
+            $"insert into probes.advancement_request (id, character_id, target_kind, target_key, request_status) values ({Guid.NewGuid()}, {characterId}, {(int)kind}, {key}, {(int)ProbeRequestStatus.Queued})");
+
+    [Theory]
+    [InlineData(ProbeRequestStatus.Abandoned)]
+    [InlineData(ProbeRequestStatus.Applied)]
+    [InlineData(ProbeRequestStatus.Approved)]
+    [InlineData(ProbeRequestStatus.Failed)]
+    [InlineData(ProbeRequestStatus.PendingApproval)]
+    [InlineData(ProbeRequestStatus.Queued)]
+    [InlineData(ProbeRequestStatus.Rejected)]
+    public async Task In_flight_means_the_same_to_IsInFlight_the_include_and_the_index(ProbeRequestStatus status)
+    {
+        var id = await InsertAsync(("strength", status));
+        var probe = new ProbeRequest(ProbeTargetKind.Trait, "strength");
+        probe.SetStatus(status);
+        var inFlight = probe.IsInFlight;
+
+        await using var db = postgres.NewContext();
+        await LoadWithInFlightAsync(db, id);
+        Assert.Equal(inFlight ? 1 : 0, db.ChangeTracker.Entries<ProbeRequest>().Count());
+
+        // A second in-flight request for the same item, written around the entity.
+        if (inFlight)
+        {
+            var exception = await Assert.ThrowsAsync<PostgresException>(() => InsertRawAsync(db, id, ProbeTargetKind.Trait, "strength"));
+            Assert.Equal(PostgresErrorCodes.UniqueViolation, exception.SqlState);
+        }
+        else
+        {
+            await InsertRawAsync(db, id, ProbeTargetKind.Trait, "strength");
+            Assert.Equal(2, await RequestCountAsync(id));
+        }
+    }
+
     [Fact]
     public async Task A_filtered_include_on_the_private_navigation_loads_only_in_flight_requests()
     {
         // Two finished, one in flight: the limit of two would wrongly trip if history loaded.
-        var id = await InsertAsync(("strength", true), ("wits", true), ("dexterity", false));
+        var id = await InsertAsync(("strength", ProbeRequestStatus.Applied), ("wits", ProbeRequestStatus.Rejected), ("dexterity", ProbeRequestStatus.PendingApproval));
 
         await using var db = postgres.NewContext();
         var character = await LoadWithInFlightAsync(db, id);
         Assert.Single(db.ChangeTracker.Entries<ProbeRequest>());
 
-        character.RequestAdvancement("athletics", Now.AddMinutes(1));
-        Assert.Throws<InvalidOperationException>(() => character.RequestAdvancement("stamina", Now.AddMinutes(2)));
+        character.SubmitRequest(ProbeTargetKind.Trait, "athletics", Now.AddMinutes(1));
+        Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(ProbeTargetKind.Trait, "stamina", Now.AddMinutes(2)));
     }
 
     [Fact]
     public async Task Two_racing_submissions_cannot_both_pass_the_limit()
     {
-        var id = await InsertAsync(("strength", false));
+        var id = await InsertAsync(("strength", ProbeRequestStatus.Queued));
 
         await using var first = postgres.NewContext();
         await using var second = postgres.NewContext();
@@ -66,8 +105,8 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
         var b = await LoadWithInFlightAsync(second, id);
 
         // Each sees one in flight, so each passes the check in memory.
-        a.RequestAdvancement("wits", Now.AddMinutes(1));
-        b.RequestAdvancement("dexterity", Now.AddMinutes(1));
+        a.SubmitRequest(ProbeTargetKind.Trait, "wits", Now.AddMinutes(1));
+        b.SubmitRequest(ProbeTargetKind.Trait, "dexterity", Now.AddMinutes(1));
 
         await first.SaveChangesAsync();
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
@@ -75,25 +114,31 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
     }
 
     [Fact]
-    public async Task The_index_refuses_a_second_in_flight_request_for_one_item_even_bypassing_the_entity()
+    public async Task Without_the_timestamp_write_two_racing_submissions_both_pass()
     {
-        var id = await InsertAsync(("strength", false));
+        var id = await InsertAsync(("strength", ProbeRequestStatus.Queued));
 
-        await using var db = postgres.NewContext();
-        var exception = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync(
-            $"insert into probes.advancement_request (id, character_id, target_key, status) values ({Guid.NewGuid()}, {id}, 'strength', 1)"));
-        Assert.Equal(PostgresErrorCodes.UniqueViolation, exception.SqlState);
+        await using var first = postgres.NewContext();
+        await using var second = postgres.NewContext();
+        var a = await LoadWithInFlightAsync(first, id);
+        var b = await LoadWithInFlightAsync(second, id);
+
+        // Only the request rows change, so the character row is never written and RowVersion never compared.
+        a.SubmitRequest(ProbeTargetKind.Trait, "wits", Now.AddMinutes(1), writeTimestamp: false);
+        b.SubmitRequest(ProbeTargetKind.Trait, "dexterity", Now.AddMinutes(1), writeTimestamp: false);
+
+        await first.SaveChangesAsync();
+        await second.SaveChangesAsync();
+        Assert.Equal(3, await RequestCountAsync(id));
     }
 
     [Fact]
-    public async Task The_index_allows_the_same_item_again_once_the_earlier_request_has_finished()
+    public async Task The_index_allows_a_trait_and_an_ability_with_the_same_key_in_flight_together()
     {
-        var id = await InsertAsync(("strength", true));
+        var id = await InsertAsync(("shadow", ProbeRequestStatus.Queued));
 
         await using var db = postgres.NewContext();
-        var character = await LoadWithInFlightAsync(db, id);
-        character.RequestAdvancement("strength", Now.AddMinutes(1));
-        await db.SaveChangesAsync();
+        await InsertRawAsync(db, id, ProbeTargetKind.Ability, "shadow");
 
         Assert.Equal(2, await RequestCountAsync(id));
     }

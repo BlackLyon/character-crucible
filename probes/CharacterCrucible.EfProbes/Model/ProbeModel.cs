@@ -70,44 +70,69 @@ public class ProbeCharacter
     // Loaded filtered to in-flight requests only; never the request history.
     private readonly IList<ProbeRequest> _requests = [];
 
-    public ProbeRequest RequestAdvancement(string targetKey, DateTimeOffset now)
+    /// <param name="writeTimestamp">False only to measure what the race guard depends on.</param>
+    public ProbeRequest SubmitRequest(ProbeTargetKind kind, string targetKey, DateTimeOffset now, bool writeTimestamp = true)
     {
-        var inFlight = _requests.Where(r => r.Status == ProbeRequestStatus.Queued).ToList();
+        var inFlight = _requests.Where(r => r.IsInFlight).ToList();
         if (inFlight.Count >= 2)
         {
             throw new InvalidOperationException("At most two requests in flight.");
         }
-        if (inFlight.Any(r => r.TargetKey == targetKey))
+        if (inFlight.Any(r => r.TargetKind == kind && r.TargetKey == targetKey))
         {
             throw new InvalidOperationException("A request for this item is already in flight.");
         }
 
-        var request = new ProbeRequest(targetKey);
+        var request = new ProbeRequest(kind, targetKey);
         _requests.Add(request);
-        LastRequestSubmittedAt = now;
+        if (writeTimestamp)
+        {
+            LastRequestSubmittedAt = now;
+        }
         return request;
     }
 }
 
+/// <summary>The real RequestStatus's members and numbers, because the index filter is raw SQL over them.</summary>
 public enum ProbeRequestStatus
 {
-    Queued = 1,
+    Abandoned = 1,
     Applied = 2,
+    Approved = 3,
+    Failed = 4,
+    PendingApproval = 5,
+    Queued = 6,
+    Rejected = 7
 }
 
-/// <summary>Stand-in for AdvancementRequest: just what the in-flight limit touches.</summary>
+public enum ProbeTargetKind
+{
+    Trait = 1,
+    Ability = 2
+}
+
+/// <summary>Stand-in for AdvancementRequest: just what the in-flight limit and its index touch.</summary>
 public class ProbeRequest
 {
-    public ProbeRequest(string targetKey) => TargetKey = targetKey;
+    /// <summary>The real InFlight statuses, as SQL. Must agree with <see cref="IsInFlight"/>.</summary>
+    public const string InFlightFilter = "request_status IN (3, 5, 6)";
+
+    public ProbeRequest(ProbeTargetKind kind, string targetKey)
+    {
+        TargetKind = kind;
+        TargetKey = targetKey;
+    }
 
     private ProbeRequest() { }
 
     public Guid Id { get; private set; }
     public Guid CharacterId { get; private set; }
+    public ProbeTargetKind TargetKind { get; private set; }
     public string TargetKey { get; private set; } = null!;
-    public ProbeRequestStatus Status { get; private set; } = ProbeRequestStatus.Queued;
+    public ProbeRequestStatus RequestStatus { get; private set; } = ProbeRequestStatus.Queued;
+    public bool IsInFlight => RequestStatus is ProbeRequestStatus.Queued or ProbeRequestStatus.PendingApproval or ProbeRequestStatus.Approved;
 
-    public void MarkApplied() => Status = ProbeRequestStatus.Applied;
+    public void SetStatus(ProbeRequestStatus status) => RequestStatus = status;
 }
 
 /// <summary>Stand-in for XpLedgerEntry: one row per XP transaction, with running balances.</summary>
@@ -168,18 +193,17 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
             e.Ignore(c => c.Traits);
             e.Ignore(c => c.Abilities);
             e.HasMany<ProbeLedgerEntry>("_xpLedgerEntries").WithOne().HasForeignKey(l => l.CharacterId);
+            e.HasMany<ProbeRequest>("_requests").WithOne().HasForeignKey(r => r.CharacterId);
         });
 
         modelBuilder.Entity<ProbeLedgerEntry>().ToTable("xp_ledger_entry");
 
-        modelBuilder.Entity<ProbeCharacter>()
-            .HasMany<ProbeRequest>("_requests").WithOne().HasForeignKey(r => r.CharacterId);
-
         modelBuilder.Entity<ProbeRequest>(e =>
         {
             e.ToTable("advancement_request");
+            e.Ignore(r => r.IsInFlight);
             // The database refuses a second in-flight request for one item, whatever the code does.
-            e.HasIndex(r => new { r.CharacterId, r.TargetKey }).IsUnique().HasFilter("status = 1");
+            e.HasIndex(r => new { r.CharacterId, r.TargetKind, r.TargetKey }).IsUnique().HasFilter(ProbeRequest.InFlightFilter);
         });
 
         modelBuilder.Entity<CountedCharacter>(e =>

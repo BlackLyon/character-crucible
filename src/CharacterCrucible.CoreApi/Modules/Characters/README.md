@@ -76,11 +76,16 @@ unsaved request's `Id` passed into a ledger or audit row.
 A request is built by `AdvancementRequest.ForTrait` or `ForAbility`, so an ability request can't
 carry a rating and a trait request always has one. `Character.SubmitRequest` accepts it.
 
-At apply time the worker re-validates. The **orchestrator** decides whether the request has
-`Failed`: the cost changed, the ruleset moved, or it's no longer affordable. The player is never
-charged a price they didn't see. `Character.ApplyAdvancement` repeats those checks as guards that
-throw, so it can't be misused, and then changes the rating or ability, the balance, the ledger and
-the audit row together. A duplicate delivery is caught before the character is touched.
+At apply time the worker re-validates. By design, the **orchestrator** (not built yet) decides
+whether the request has `Failed`: the cost changed, the ruleset moved, or it's no longer
+affordable. The player is never charged a price they didn't see. The orchestrator is also what
+catches a duplicate delivery, before the character is touched.
+
+`Character.ApplyAdvancement` repeats those checks as guards that throw, so it can't be misused on
+its own. That includes refusing a request that isn't `Queued` or `Approved`, so a request still
+waiting for a narrator can't be applied. Then it changes the rating or ability, the balance, the
+ledger and the audit row together. `SubmitRequest` likewise accepts only a request fresh from a
+factory, either `Queued` or `PendingApproval`.
 
 **A skill rated 0 is a skill not held**, so every trait on a sheet is rated 1 or more, and buying a
 new skill records a change from `0` to `n`.
@@ -100,6 +105,12 @@ its request. Both are enforced in the constructor.
 
 ## Not built yet
 
+- **The orchestrator**: the application code that loads a character with its in-flight requests,
+  calls Rules, and decides between `ApplyAdvancement` and `MarkFailed`. It comes with the
+  endpoints and the worker.
+- **Moving a character to a new ruleset version.** `RulesetVersionId` is designed to move, but no
+  method changes it yet. Until one does, the apply-time ruleset check can't fail. It's parked with
+  the question of what happens to a sheet the new version makes illegal.
 - **Narrator edits** (story grants, corrections, refunds) are designed but parked as one feature.
   They raise refund policy questions that are best answered once the core works.
 - **Character notes** and **notifications** are placed in later stages. Until then, the `reason`

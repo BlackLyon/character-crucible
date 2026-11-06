@@ -73,13 +73,13 @@ Modules/Rulesets/
     Entities/       Ruleset, RulesetVersion, the four definitions
     ValueObjects/   CostRule, DomainBand, PublicationRecord, …
     Enums/          one per file
+    Constants/      FieldLengths — one source for the guards and the EF configuration
   Persistence/      EF configurations          (added when needed)
   Endpoints/        minimal API endpoints      (added when needed)
 ```
 
-`Characters` adds two kinds, each used only inside its module: `Constants/` (`FieldLengths`,
-shared by the guards and the EF configuration) and `Inputs/` (`CharacterDraft`, what a caller
-supplies to build or edit a sheet). Neither is a value object: neither is ever stored.
+`Characters` follows the same layout and adds one kind, `Inputs/`: `CharacterDraft`, what a caller
+supplies to build or edit a sheet. It's not a value object, because it's never stored.
 
 Namespaces follow folders — `CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities`.
 

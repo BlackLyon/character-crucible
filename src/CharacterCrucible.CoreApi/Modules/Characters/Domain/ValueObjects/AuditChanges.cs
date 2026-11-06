@@ -9,17 +9,17 @@ internal static class AuditChanges
         new($"Status changed from {from} to {to}.", [new ChangeEntry("status", "Status", from.ToString(), to.ToString())]);
 
     internal static AuditChange XpChange(int amount, int totalXpBefore, int totalXpAfter, int unspentXpBefore, int unspentXpAfter) =>
-        new($"Character gained experience points. Amount gained {amount}. Total Earned XP from {totalXpBefore} to {totalXpAfter}. Total Unspent XP from {unspentXpBefore} to {unspentXpAfter}.",
-            [new ChangeEntry("totalXp", "Total Earned XP", totalXpBefore.ToString(), totalXpAfter.ToString()), new ChangeEntry("unspentXp", "Unspent XP", unspentXpBefore.ToString(), unspentXpAfter.ToString())]);
+        new($"Character gained experience points. Amount gained {amount}. Total Earned XP from {totalXpBefore} to {totalXpAfter}. Unspent XP from {unspentXpBefore} to {unspentXpAfter}.",
+            [new ChangeEntry("totalEarnedXp", "Total Earned XP", totalXpBefore.ToString(), totalXpAfter.ToString()), new ChangeEntry("unspentXp", "Unspent XP", unspentXpBefore.ToString(), unspentXpAfter.ToString())]);
 
-    internal static AuditChange AdvancementChange(TargetKind kind, string targetKey, int quotedCost, int oldRating = 0, int targetRating = 0)
+    internal static AuditChange AdvancementChange(TargetKind kind, string targetKey, int quotedCost, int oldRating = 0, int newRating = 0)
     {
         var changes = new List<ChangeEntry>();
 
         switch (kind)
         {
             case TargetKind.Trait:
-                changes.Add(new ChangeEntry($"trait.{targetKey}", "Trait", oldRating.ToString(), targetRating.ToString()));
+                changes.Add(new ChangeEntry($"trait.{targetKey}", "Trait", oldRating.ToString(), newRating.ToString()));
                 break;
             case TargetKind.Ability:
                 changes.Add(new ChangeEntry($"ability.{targetKey}", "Ability", null, targetKey));

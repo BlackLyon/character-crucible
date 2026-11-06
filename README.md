@@ -3,7 +3,7 @@
 A character creation and advancement manager for tabletop RPGs.
 
 Players create characters and submit advancement requests — spend XP to raise a trait or
-acquire a power. Most are evaluated and applied automatically; the exceptional ones are
+acquire an ability. Most are evaluated and applied automatically; the exceptional ones are
 routed to a narrator, who can also correct a sheet directly when something has gone
 wrong. The rules — what traits exist, what they cost, what gates them — are data rather
 than code, so a table's houserules and errata change by publishing a new ruleset version
@@ -187,7 +187,7 @@ for the boundary rule and why it's enforced by a test rather than by assemblies.
 
 This is a proof of concept, deliberately narrow:
 
-- **In:** characters, traits, powers, the advancement request and approval pipeline, an
+- **In:** characters, traits, abilities, the advancement request and approval pipeline, an
   admin surface for authoring rulesets
 - **Out, for now:** equipment, dice rolling, combat resolution, campaign management, and
   any form of rules scripting language

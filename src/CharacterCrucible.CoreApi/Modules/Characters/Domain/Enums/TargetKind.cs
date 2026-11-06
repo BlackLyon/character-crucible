@@ -3,6 +3,6 @@
 // Numbered: persisted, so these values must survive a member being reordered.
 public enum TargetKind
 {
-    Ability = 1,
-    Trait = 2
+    Trait = 1,
+    Ability = 2
 }
