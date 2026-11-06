@@ -29,16 +29,22 @@ public class XpLedgerProbes(PostgresProbeFixture postgres, ITestOutputHelper out
     }
 
     [Fact]
-    public async Task A_normal_load_leaves_the_ledger_unloaded_and_empty()
+    public async Task A_field_only_navigation_maps_and_history_is_read_by_its_own_query()
     {
+        await using (var db = postgres.NewContext())
+        {
+            var navigation = db.Model.FindEntityType(typeof(ProbeCharacter))!.FindNavigation("_xpLedgerEntries")!;
+            Assert.True(navigation.IsCollection);
+            Assert.Null(typeof(ProbeCharacter).GetProperty("XpLedgerEntries"));
+        }
+
         var id = await InsertWithHistoryAsync();
 
-        await using var db = postgres.NewContext();
-        var character = await db.Characters.SingleAsync(c => c.Id == id);
-
-        Assert.Empty(character.XpLedgerEntries);
-        Assert.Equal(30, character.UnspentXp);
-        Assert.Equal(2, await LedgerCountAsync(id));
+        await using var reload = postgres.NewContext();
+        Assert.Equal(30, (await reload.Characters.SingleAsync(c => c.Id == id)).UnspentXp);
+        var history = await reload.Set<ProbeLedgerEntry>()
+            .Where(l => l.CharacterId == id).OrderBy(l => l.TotalEarnedAfter).Select(l => l.Delta).ToListAsync();
+        Assert.Equal([20, 10], history);
     }
 
     [Fact]

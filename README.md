@@ -3,8 +3,8 @@
 A character creation and advancement manager for tabletop RPGs.
 
 Players create characters and submit advancement requests — spend XP to raise a trait or
-acquire a power. Most are evaluated and applied automatically; the exceptional ones are
-routed to a storyteller, who can also correct a sheet directly when something has gone
+acquire an ability. Most are evaluated and applied automatically; the exceptional ones are
+routed to a narrator, who can also correct a sheet directly when something has gone
 wrong. The rules — what traits exist, what they cost, what gates them — are data rather
 than code, so a table's houserules and errata change by publishing a new ruleset version
 rather than by deploying.
@@ -13,6 +13,23 @@ It runs a small original rule system, built for this project. It tracks what a c
 *is*, not what is happening to it in a session: no play state, no damage, no dice.
 
 > **Status: in development.** Started September 2026. Not yet deployed.
+
+## What exists today
+
+The project is being built in stages, domain first. Nothing runs end to end yet.
+
+- **`Rulesets`:** written, mapped to Postgres with EF Core, and covered by a Testcontainers
+  round-trip test. That includes the two-phase publish of an immutable version.
+- **`Characters`:** the domain is written. That covers characters, their review and play status, XP
+  with a ledger and an audit trail, and advancement requests from submission to apply. Its EF
+  configuration and its tests are next. See
+  [its README](src/CharacterCrucible.CoreApi/Modules/Characters/README.md).
+- **EF probes:** a test project that pins down how EF Core and Npgsql behave, the facts the
+  persistence design depends on, before the real configuration relies on them. See
+  [probes/](probes/README.md).
+- **An architecture test** enforces the module boundaries.
+- **Not started:** endpoints, authentication, the message pipeline, the Rules evaluator, the
+  front end, and deployment.
 
 ## A note on scale, before anything else
 
@@ -58,26 +75,28 @@ allowed?" has an answer that can be replayed.
 ## Approval is the exception, not the rule
 
 Waiting on a human to approve a single point of Strength would make this worse than a
-spreadsheet. So the worker applies routine advancement automatically, and storytellers
+spreadsheet. So the worker applies routine advancement automatically, and narrators
 see only two kinds of thing:
 
 - **Escalations.** Some definitions are gated — a rare or powerful ability that should not
   be handed out casually. Whether something is gated is a property of the *ruleset*, so a
-  storyteller changes it by publishing a new version, not by anyone shipping code.
+  narrator changes it by publishing a new version, not by anyone shipping code.
 - **Corrections.** When a sheet is wrong — a defect, a failed call, state left half-applied
-  — a storyteller or admin edits it directly.
+  — a narrator or admin edits it directly.
 
-Correction is a **break-glass path**: it bypasses the rules engine, because it exists
-precisely for when the rules engine produced bad state. So every manual edit is audited with
-a required reason, and overrides are marked on the character's history as distinct from
-advancement earned through the pipeline. An unaudited break-glass path is indistinguishable
-from a storyteller quietly buffing a friend's character.
+Correction is a **break-glass path**: it is applied immediately rather than queued behind the
+worker, because it exists for when the pipeline produced bad state. It still answers to the
+rules, though: no narrator can set Strength to 47. That's a rule about valid state, not a
+permission check. Every manual edit is audited with a required reason, and is recorded in the
+character's history as a different kind of event from advancement earned through the pipeline.
+An unaudited break-glass path is indistinguishable from a narrator quietly buffing a friend's
+character. *Designed; not yet built.*
 
 ## Architecture
 
 ```
 Angular SPA
-     │  (Entra ID — Player / Storyteller / Admin)
+     │  (Entra ID — Player / Narrator / Admin)
      ▼
   Core API ──────── Service Bus ────────► Worker
  (characters,                               │
@@ -92,10 +111,10 @@ Angular SPA
 ```
 
 Three deployables. Service-to-service calls carry Entra ID app tokens; the same mechanism
-provides the Player / Storyteller / Admin roles for users.
+provides the Player / Narrator / Admin roles for users.
 
 The worker **re-validates at apply time** rather than trusting the earlier decision — the
-character may have moved on since, and for an escalated request sitting in a storyteller's
+character may have moved on since, and for an escalated request sitting in a narrator's
 queue the gap is days, during which the ruleset itself may have been republished.
 
 ## Stack
@@ -154,8 +173,10 @@ src/
   CharacterCrucible.Worker       Applies advancement; re-validates before it does.
   CharacterCrucible.Contracts    Types shared across the service boundary.
 tests/
-  CharacterCrucible.CoreApi.Tests
+  CharacterCrucible.CoreApi.Tests   Architecture, domain guard and Testcontainers persistence tests
   CharacterCrucible.Rules.Tests
+probes/
+  CharacterCrucible.EfProbes        What EF Core and Npgsql actually do, against stand-in types
 ```
 
 The Core API's modules are folders, not projects — see
@@ -166,7 +187,7 @@ for the boundary rule and why it's enforced by a test rather than by assemblies.
 
 This is a proof of concept, deliberately narrow:
 
-- **In:** characters, traits, powers, the advancement request and approval pipeline, an
+- **In:** characters, traits, abilities, the advancement request and approval pipeline, an
   admin surface for authoring rulesets
 - **Out, for now:** equipment, dice rolling, combat resolution, campaign management, and
   any form of rules scripting language

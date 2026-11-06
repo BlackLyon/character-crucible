@@ -4,13 +4,23 @@ The Core API is a modular monolith. Each module owns a slice of the domain, keep
 Postgres schema, and talks to other modules through explicit contracts rather than by
 reaching into their types.
 
-Planned modules:
+Modules:
 
 | Module | Owns |
 |---|---|
-| `Characters` | Characters, their trait ratings and acquired powers |
 | `Rulesets` | Ruleset content authoring, and publishing immutable versioned snapshots |
-| `Advancement` | Advancement requests, their lifecycle, approvals and the audit trail |
+| `Characters` | Characters, their traits and abilities, the XP ledger, advancement requests and their lifecycle, and the audit trail |
+
+**Two modules, not three.** Advancement was planned as its own module and folded into
+`Characters` before any of it was written. Its central operation — applying an advancement —
+always changes a request *and* a character in one transaction, so a separate module would have
+put a contract across the boundary that every apply had to cross, mirroring `Character`'s own
+operations. The audit trail was never advancement-specific either: approving a character,
+removing it from play and granting XP all need audit rows.
+
+Split it back out if the request workflow grows concerns `Characters` does not share — a
+separate deployable, or requests that apply to something other than characters. The audit
+trail gets its own module the day a second module needs auditing.
 
 ## The rule
 
@@ -42,8 +52,8 @@ Green is not proof. Four kinds of breach are invisible to it, all measured:
   test needs an explicit allow-list of one namespace rather than a blanket prohibition.
 - **`public const` values**, which the compiler inlines, leaving no IL reference at all.
 - **Enum members cast to their underlying type** — `(int)SomeEnum.Value` compiles to a bare
-  numeric load with the type reference dropped. The nine enums are the most borrowable things
-  in the module.
+  numeric load with the type reference dropped. Enums are the most borrowable things in a
+  module, and both modules have several.
 - **Reflection and service-locator lookups by string.** Unavoidable with any IL-based tool.
 
 `NetArchTest.Rules` 1.3.2 was published in 2021, so these will not be fixed upstream.
@@ -63,9 +73,13 @@ Modules/Rulesets/
     Entities/       Ruleset, RulesetVersion, the four definitions
     ValueObjects/   CostRule, DomainBand, PublicationRecord, …
     Enums/          one per file
+    Constants/      FieldLengths — one source for the guards and the EF configuration
   Persistence/      EF configurations          (added when needed)
   Endpoints/        minimal API endpoints      (added when needed)
 ```
+
+`Characters` follows the same layout and adds one kind, `Inputs/`: `CharacterDraft`, what a caller
+supplies to build or edit a sheet. It's not a value object, because it's never stored.
 
 Namespaces follow folders — `CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities`.
 

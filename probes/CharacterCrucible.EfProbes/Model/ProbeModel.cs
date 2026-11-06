@@ -22,7 +22,7 @@ public class ProbeCharacter
     public string Name { get; private set; } = null!;
 
     /// <summary>Postgres xmin, which the database bumps on every row write.</summary>
-    public uint Version { get; private set; }
+    public uint RowVersion { get; private set; }
 
     private readonly IList<TraitValue> _traits = [];
     public IReadOnlyCollection<TraitValue> Traits => _traits.AsReadOnly();
@@ -48,9 +48,8 @@ public class ProbeCharacter
     public int TotalEarnedXp { get; private set; }
     public int UnspentXp { get; private set; }
 
-    // Written through, never loaded by default: empty after a normal load means "not loaded".
+    // Write-only: no getter, so "not loaded" can never be read as "no history". History is a query.
     private readonly IList<ProbeLedgerEntry> _xpLedgerEntries = [];
-    public IReadOnlyCollection<ProbeLedgerEntry> XpLedgerEntries => _xpLedgerEntries.AsReadOnly();
 
     public void AwardXp(int amount)
     {
@@ -64,6 +63,76 @@ public class ProbeCharacter
         UnspentXp -= amount;
         _xpLedgerEntries.Add(new ProbeLedgerEntry(-amount, TotalEarnedXp, UnspentXp));
     }
+
+    /// <summary>Written on every submission so the Character row changes and RowVersion guards the limit.</summary>
+    public DateTimeOffset? LastRequestSubmittedAt { get; private set; }
+
+    // Loaded filtered to in-flight requests only; never the request history.
+    private readonly IList<ProbeRequest> _requests = [];
+
+    /// <param name="writeTimestamp">False only to measure what the race guard depends on.</param>
+    public ProbeRequest SubmitRequest(ProbeTargetKind kind, string targetKey, DateTimeOffset now, bool writeTimestamp = true)
+    {
+        var inFlight = _requests.Where(r => r.IsInFlight).ToList();
+        if (inFlight.Count >= 2)
+        {
+            throw new InvalidOperationException("At most two requests in flight.");
+        }
+        if (inFlight.Any(r => r.TargetKind == kind && r.TargetKey == targetKey))
+        {
+            throw new InvalidOperationException("A request for this item is already in flight.");
+        }
+
+        var request = new ProbeRequest(kind, targetKey);
+        _requests.Add(request);
+        if (writeTimestamp)
+        {
+            LastRequestSubmittedAt = now;
+        }
+        return request;
+    }
+}
+
+/// <summary>The real RequestStatus's members and numbers, because the index filter is raw SQL over them.</summary>
+public enum ProbeRequestStatus
+{
+    Abandoned = 1,
+    Applied = 2,
+    Approved = 3,
+    Failed = 4,
+    PendingApproval = 5,
+    Queued = 6,
+    Rejected = 7
+}
+
+public enum ProbeTargetKind
+{
+    Trait = 1,
+    Ability = 2
+}
+
+/// <summary>Stand-in for AdvancementRequest: just what the in-flight limit and its index touch.</summary>
+public class ProbeRequest
+{
+    /// <summary>The real InFlight statuses, as SQL. Must agree with <see cref="IsInFlight"/>.</summary>
+    public const string InFlightFilter = "request_status IN (3, 5, 6)";
+
+    public ProbeRequest(ProbeTargetKind kind, string targetKey)
+    {
+        TargetKind = kind;
+        TargetKey = targetKey;
+    }
+
+    private ProbeRequest() { }
+
+    public Guid Id { get; private set; }
+    public Guid CharacterId { get; private set; }
+    public ProbeTargetKind TargetKind { get; private set; }
+    public string TargetKey { get; private set; } = null!;
+    public ProbeRequestStatus RequestStatus { get; private set; } = ProbeRequestStatus.Queued;
+    public bool IsInFlight => RequestStatus is ProbeRequestStatus.Queued or ProbeRequestStatus.PendingApproval or ProbeRequestStatus.Approved;
+
+    public void SetStatus(ProbeRequestStatus status) => RequestStatus = status;
 }
 
 /// <summary>Stand-in for XpLedgerEntry: one row per XP transaction, with running balances.</summary>
@@ -94,7 +163,7 @@ public class CountedCharacter
 
     public Guid Id { get; private set; }
     public string Name { get; private set; } = null!;
-    public int Version { get; private set; }
+    public int RowVersion { get; private set; }
 
     private readonly IList<TraitValue> _traits = [];
     public IReadOnlyCollection<TraitValue> Traits => _traits.AsReadOnly();
@@ -102,7 +171,7 @@ public class CountedCharacter
     public void SetTrait(string key, int rating)
     {
         _traits.Add(new TraitValue(key, rating));
-        Version++;
+        RowVersion++;
     }
 }
 
@@ -118,20 +187,29 @@ public class ProbeDbContext(DbContextOptions<ProbeDbContext> options) : DbContex
         modelBuilder.Entity<ProbeCharacter>(e =>
         {
             e.ToTable("character");
-            e.Property(c => c.Version).IsRowVersion();
+            e.Property(c => c.RowVersion).IsRowVersion();
             e.ComplexCollection<IList<TraitValue>, TraitValue>("_traits").ToJson("traits");
             e.ComplexCollection<IList<HeldAbility>, HeldAbility>("_abilities").ToJson("abilities");
             e.Ignore(c => c.Traits);
             e.Ignore(c => c.Abilities);
-            e.HasMany(c => c.XpLedgerEntries).WithOne().HasForeignKey(l => l.CharacterId);
+            e.HasMany<ProbeLedgerEntry>("_xpLedgerEntries").WithOne().HasForeignKey(l => l.CharacterId);
+            e.HasMany<ProbeRequest>("_requests").WithOne().HasForeignKey(r => r.CharacterId);
         });
 
         modelBuilder.Entity<ProbeLedgerEntry>().ToTable("xp_ledger_entry");
 
+        modelBuilder.Entity<ProbeRequest>(e =>
+        {
+            e.ToTable("advancement_request");
+            e.Ignore(r => r.IsInFlight);
+            // The database refuses a second in-flight request for one item, whatever the code does.
+            e.HasIndex(r => new { r.CharacterId, r.TargetKind, r.TargetKey }).IsUnique().HasFilter(ProbeRequest.InFlightFilter);
+        });
+
         modelBuilder.Entity<CountedCharacter>(e =>
         {
             e.ToTable("counted_character");
-            e.Property(c => c.Version).IsConcurrencyToken();
+            e.Property(c => c.RowVersion).IsConcurrencyToken();
             e.ComplexCollection<IList<TraitValue>, TraitValue>("_traits").ToJson("traits");
             e.Ignore(c => c.Traits);
         });

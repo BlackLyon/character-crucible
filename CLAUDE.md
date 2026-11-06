@@ -1,7 +1,7 @@
 # Character Crucible — working notes for Claude
 
 A system-agnostic character manager for tabletop RPGs. Players submit advancement requests;
-most are applied automatically, the gated ones go to a storyteller. Game rules live in data.
+most are applied automatically, the gated ones go to a narrator. Game rules live in data.
 
 ## Read these before doing anything
 
@@ -11,7 +11,7 @@ Local only — `notes/` is gitignored and holds the real decision record:
 |---|---|
 | `notes/architecture-decision.md` | Why the system is shaped this way, the alternatives rejected, the falsifiers |
 | `notes/domain-design.md` | **The domain's reasoning.** What makes a character, the attribute and ability model, resolution, and which design questions are still open |
-| `notes/domain/` | **Entity specifications**, one file per module — what to actually write. Start at its README for build order and the entity/value-object convention |
+| `notes/domain/` | **Entity specifications** — `rulesets.md`, `characters.md`, `advancement.md` (part of `Characters`), plus `flows.md` for every use case on one page. What to actually write. Start at its README for build order and the entity/value-object convention |
 | `notes/plan.md` | Staged scope, ordered by value, and what is deliberately out |
 | `notes/process-rulesets-module.md` | After-action from the first module, and the process changes that follow from it |
 | `notes/<latest date>.md` | Where work stopped and what starts next |
@@ -33,8 +33,9 @@ restart the debate.
   character, a proposed advancement and a ruleset version, it answers *legal · cost · needs a
   human*. If it needs to query, the boundary is wrong — collapse it into the Core API.
 - **Modules never reference each other's internal types.** The Core API is a modular
-  monolith; `Characters`, `Rulesets` and `Advancement` are folders that talk through
-  contracts. See `src/CharacterCrucible.CoreApi/Modules/README.md`.
+  monolith; `Characters` and `Rulesets` are folders that talk through contracts.
+  Advancement lives inside `Characters` — folded in, not a third module. See
+  `src/CharacterCrucible.CoreApi/Modules/README.md`.
 - **No users or permissions service.** Entra owns identity and coarse roles. Fine-grained
   access is `AuthorizationHandler<TRequirement, TResource>` in the Core API.
 - **Rulesets are data, not code.** No DSL, no expression language.
