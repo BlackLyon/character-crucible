@@ -40,7 +40,7 @@ charset = utf-8-bom
 # per-rule severity drives the IDE only, and setting it there alone does nothing in a
 # build. Directory.Build.props sets WarningsAsErrors=IDE1006, which is what makes this a
 # hard stop -- a warning alone would not keep a lowercase public property out of a
-# published snapshot, and no CI enforces -warnaserror. Catches lowercase positional
+# published snapshot, and only CI builds with -warnaserror. Catches lowercase positional
 # record parameters, which emit lowercase public properties and compile silently.
 dotnet_diagnostic.IDE1006.severity = warning
 
