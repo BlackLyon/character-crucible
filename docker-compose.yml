@@ -42,7 +42,7 @@ services:
 
 
   # Runs the test suite inside Linux. Windows Smart App Control blocks freshly built assemblies
-  # on this machine, which presents as a test-host crash rather than a test failure -- so this is
+  # on this machine, which presents as a crashed test run rather than a test failure -- so this is
   # the verification run that cannot be blocked. See notes/dev-environment.md.
   #
   #   docker compose run --rm tests

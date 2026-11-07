@@ -23,9 +23,11 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        await _container.StartAsync();
+        // The run's token, so --timeout can stop a container that never becomes ready.
+        var ct = TestContext.Current.CancellationToken;
+        await _container.StartAsync(ct);
         await using var db = NewContext();
-        await db.Database.MigrateAsync();
+        await db.Database.MigrateAsync(ct);
     }
 
     public ValueTask DisposeAsync() => _container.DisposeAsync();

@@ -12,8 +12,6 @@ namespace CharacterCrucible.EfProbes;
 [Collection(ProbeCollection.Name)]
 public class RequestLimitProbes(PostgresProbeFixture postgres)
 {
-    private static CancellationToken Ct => TestContext.Current.CancellationToken;
-
     private static readonly DateTimeOffset Now = new(2026, 10, 15, 9, 30, 0, TimeSpan.Zero);
 
     // IsInFlight is computed, so EF can't translate it: the include needs its own copy, as the real one will.
@@ -21,6 +19,8 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
         r.RequestStatus == ProbeRequestStatus.Queued
         || r.RequestStatus == ProbeRequestStatus.PendingApproval
         || r.RequestStatus == ProbeRequestStatus.Approved;
+
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private async Task<Guid> InsertAsync(params (string Key, ProbeRequestStatus Status)[] requests)
     {
@@ -38,17 +38,18 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
     private static Task<ProbeCharacter> LoadWithInFlightAsync(ProbeDbContext db, Guid id) =>
         db.Characters
             .Include(c => EF.Property<IList<ProbeRequest>>(c, "_requests").AsQueryable().Where(InFlight))
-            .SingleAsync(c => c.Id == id);
+            .SingleAsync(c => c.Id == id, Ct);
 
     private async Task<int> RequestCountAsync(Guid id)
     {
         await using var db = postgres.NewContext();
-        return await db.Set<ProbeRequest>().CountAsync(r => r.CharacterId == id);
+        return await db.Set<ProbeRequest>().CountAsync(r => r.CharacterId == id, Ct);
     }
 
     private Task InsertRawAsync(ProbeDbContext db, Guid characterId, ProbeTargetKind kind, string key) =>
         db.Database.ExecuteSqlAsync(
-            $"insert into probes.advancement_request (id, character_id, target_kind, target_key, request_status) values ({Guid.NewGuid()}, {characterId}, {(int)kind}, {key}, {(int)ProbeRequestStatus.Queued})");
+            $"insert into probes.advancement_request (id, character_id, target_kind, target_key, request_status) values ({Guid.NewGuid()}, {characterId}, {(int)kind}, {key}, {(int)ProbeRequestStatus.Queued})",
+            Ct);
 
     [Theory]
     [InlineData(ProbeRequestStatus.Abandoned)]

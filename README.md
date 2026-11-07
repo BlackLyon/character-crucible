@@ -146,6 +146,17 @@ app starts fine and then fails on the first query with `relation ... does not ex
 The integration tests apply migrations themselves against a throwaway Postgres, so `dotnet test`
 does not depend on the step above.
 
+The tests are on xUnit v3, which `global.json` runs on Microsoft Testing Platform rather than
+VSTest. Two things differ from VSTest habits:
+- **A project that runs zero tests fails the run.** That catches a project that silently stopped
+  discovering its tests.
+- **Filters use xUnit's own options, within one project.** A filter across the whole solution
+  leaves the other projects with zero tests, and they fail:
+
+```bash
+dotnet test --project tests/CharacterCrucible.CoreApi.Tests --filter-class '*FieldLength*'
+```
+
 The suite also runs inside Linux, which needs only Docker — no local SDK, and no dependence on
 whatever SDK version happens to be installed:
 

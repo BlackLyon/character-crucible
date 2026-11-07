@@ -15,8 +15,6 @@ namespace CharacterCrucible.CoreApi.Tests.Persistence;
 /// </summary>
 public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<PostgresFixture>
 {
-    private static CancellationToken Ct => TestContext.Current.CancellationToken;
-
     /// <summary>Deliberately has no space after the colon — jsonb would add one.</summary>
     private const string Snapshot = """{"traits":[],"abilities":[]}""";
 
@@ -26,6 +24,8 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
     /// </summary>
     private static readonly DateTimeOffset PublishedAt =
         new(2026, 3, 1, 14, 37, 9, TimeSpan.Zero);
+
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static Ruleset NewRuleset(string name) => new(name, "A test system.", "Blacklyon");
 
