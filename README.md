@@ -1,5 +1,7 @@
 # Character Crucible
 
+[![CI](https://github.com/BlackLyon/character-crucible/actions/workflows/ci.yml/badge.svg)](https://github.com/BlackLyon/character-crucible/actions/workflows/ci.yml)
+
 A character creation and advancement manager for tabletop RPGs.
 
 Players create characters and submit advancement requests — spend XP to raise a trait or
@@ -28,6 +30,8 @@ The project is being built in stages, domain first. Nothing runs end to end yet.
   persistence design depends on, before the real configuration relies on them. See
   [probes/](probes/README.md).
 - **An architecture test** enforces the module boundaries.
+- **CI** builds at zero warnings and runs the whole suite, probes included, on every pull request.
+  Nothing deploys yet.
 - **Not started:** endpoints, authentication, the message pipeline, the Rules evaluator, the
   front end, and deployment.
 
@@ -177,6 +181,8 @@ tests/
   CharacterCrucible.Rules.Tests
 probes/
   CharacterCrucible.EfProbes        What EF Core and Npgsql actually do, against stand-in types
+.github/workflows/
+  ci.yml                            Build at zero warnings, then every test and probe
 ```
 
 The Core API's modules are folders, not projects — see
