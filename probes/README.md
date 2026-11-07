@@ -36,7 +36,9 @@ protects, and revisit the decision. Do not edit the probe until green.
 ## Adding a probe
 
 A new EF question goes here as a test, not into a scratch project, so its answer stays runnable.
-All probe classes share one Postgres through the `ProbeCollection` fixture.
+All probe classes share one Postgres through the `ProbeCollection` fixture. Async EF calls take
+the class's `Ct` (the test's cancellation token): xUnit v3's analyzer requires it, and CI builds
+with warnings as errors.
 
 The stand-ins carry only what a probe asks about. They change when the real entity takes a shape
 no probe covers, such as a new jsonb collection or a different value-object shape, not when it

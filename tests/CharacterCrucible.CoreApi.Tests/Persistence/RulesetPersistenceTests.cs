@@ -15,6 +15,8 @@ namespace CharacterCrucible.CoreApi.Tests.Persistence;
 /// </summary>
 public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<PostgresFixture>
 {
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     /// <summary>Deliberately has no space after the colon — jsonb would add one.</summary>
     private const string Snapshot = """{"traits":[],"abilities":[]}""";
 
@@ -66,7 +68,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             var ruleset = NewRuleset("Round trip");
             var draft = ruleset.CreateDraft(1, 0, RulesetVersionKind.Release);
             db.Rulesets.Add(ruleset);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
 
             // Ids exist only after the insert, which is why definitions are added in a second
             // step rather than while building the graph.
@@ -74,7 +76,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             draft.AddDefinition(Strength(draft.Id));
             draft.AddDefinition(Hadoken(draft.Id));
             draft.AddDefinition(Warrior(draft.Id));
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
 
             rulesetId = ruleset.Id;
         }
@@ -86,7 +88,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
                 .Include(r => r.Versions).ThenInclude(v => v.TraitDefinitions)
                 .Include(r => r.Versions).ThenInclude(v => v.AbilityDefinitions)
                 .Include(r => r.Versions).ThenInclude(v => v.ArchetypeDefinitions)
-                .SingleAsync(r => r.Id == rulesetId);
+                .SingleAsync(r => r.Id == rulesetId, Ct);
 
             var version = Assert.Single(reloaded.Versions);
 
@@ -175,14 +177,14 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             var ruleset = NewRuleset("Publish and promote");
             var draft = ruleset.CreateDraft(1, 0, RulesetVersionKind.Release);
             db.Rulesets.Add(ruleset);
-            await db.SaveChangesAsync();                       // phase 1
+            await db.SaveChangesAsync(Ct);                       // phase 1
 
             // The clock is pinned so PublishedDate can be asserted exactly. The other two
             // publishing tests pass TimeProvider.System, which says they do not care when.
             draft.Publish("Publish and promote", "Blacklyon", new FakeTimeProvider(PublishedAt),
                 Guid.CreateVersion7(), Snapshot);
             ruleset.SetCurrentVersion(draft);
-            await db.SaveChangesAsync();                       // phase 2
+            await db.SaveChangesAsync(Ct);                       // phase 2
 
             rulesetId = ruleset.Id;
         }
@@ -191,7 +193,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
         {
             var reloaded = await db.Rulesets
                 .Include(r => r.Versions)
-                .SingleAsync(r => r.Id == rulesetId);
+                .SingleAsync(r => r.Id == rulesetId, Ct);
 
             var version = Assert.Single(reloaded.Versions);
 
@@ -236,7 +238,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
         var ruleset = NewRuleset("Partial index");
         ruleset.CreateDraft(1, 0, RulesetVersionKind.Release);
         db.Rulesets.Add(ruleset);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(Ct);
 
         // Going around CreateDraft deliberately: its guard is blind whenever a Ruleset was
         // loaded without its versions, and the partial unique index is what catches that.
@@ -261,11 +263,11 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
         var ruleset = NewRuleset("Composite index");
         var draft = ruleset.CreateDraft(3, 1, RulesetVersionKind.Release);
         db.Rulesets.Add(ruleset);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(Ct);
 
         draft.Publish("Composite index", "Blacklyon", TimeProvider.System,
             Guid.CreateVersion7(), "{}");
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(Ct);
 
         // 3.1 again for the same ruleset. Published, so the one-draft index does not apply and
         // this tests the composite index alone.
@@ -304,17 +306,17 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             var ruleset = NewRuleset("Draft after publish");
             var first = ruleset.CreateDraft(1, 0, RulesetVersionKind.Release);
             db.Rulesets.Add(ruleset);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
 
             first.Publish("Draft after publish", "Blacklyon", TimeProvider.System,
                 Guid.CreateVersion7(), Snapshot);
             ruleset.SetCurrentVersion(first);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
 
             // 1.0 is published, so it should no longer match the draft filter and 1.1 should
             // save without violating the unique index.
             ruleset.CreateDraft(1, 1, RulesetVersionKind.Errata);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
 
             rulesetId = ruleset.Id;
         }
@@ -323,7 +325,7 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
         {
             var reloaded = await db.Rulesets
                 .Include(r => r.Versions)
-                .SingleAsync(r => r.Id == rulesetId);
+                .SingleAsync(r => r.Id == rulesetId, Ct);
 
             Assert.Equal(2, reloaded.Versions.Count);
             Assert.Single(reloaded.Versions, v => v.Status == RulesetVersionStatus.Draft);
@@ -357,12 +359,12 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             var ruleset = NewRuleset("Authoring loop");
             var draft = ruleset.CreateDraft(1, 0, RulesetVersionKind.Playtest);
             db.Rulesets.Add(ruleset);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
 
             // Added in a SECOND save, against a row that already exists.
             draft.AddDefinition(Body(draft.Id));
             draft.AddDefinition(Strength(draft.Id));
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
 
             rulesetId = ruleset.Id;
             draftId = draft.Id;
@@ -373,14 +375,14 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             var draft = await db.RulesetVersions
                 .Include(v => v.DomainDefinitions)
                 .Include(v => v.TraitDefinitions)
-                .SingleAsync(v => v.Id == draftId);
+                .SingleAsync(v => v.Id == draftId, Ct);
 
             Assert.Single(draft.DomainDefinitions);
             Assert.Single(draft.TraitDefinitions);
 
             // Severing a Cascade relationship should delete the row, not orphan it or throw.
             draft.RemoveDefinition(draft.TraitDefinitions.Single());
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
         }
 
         await using (var db = postgres.NewContext())
@@ -388,13 +390,13 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             var draft = await db.RulesetVersions
                 .Include(v => v.DomainDefinitions)
                 .Include(v => v.TraitDefinitions)
-                .SingleAsync(v => v.Id == draftId);
+                .SingleAsync(v => v.Id == draftId, Ct);
 
             Assert.Single(draft.DomainDefinitions);
             Assert.Empty(draft.TraitDefinitions);
 
             // Gone from the table, not merely detached from the navigation.
-            Assert.Equal(0, await db.Set<TraitDefinition>().CountAsync(t => t.RulesetVersionId == draftId));
+            Assert.Equal(0, await db.Set<TraitDefinition>().CountAsync(t => t.RulesetVersionId == draftId, Ct));
 
             // Still a draft throughout, so the one-draft index was never in play.
             Assert.Equal(RulesetVersionStatus.Draft, draft.Status);

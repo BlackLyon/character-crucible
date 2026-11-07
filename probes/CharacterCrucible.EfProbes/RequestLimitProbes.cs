@@ -12,6 +12,8 @@ namespace CharacterCrucible.EfProbes;
 [Collection(ProbeCollection.Name)]
 public class RequestLimitProbes(PostgresProbeFixture postgres)
 {
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     private static readonly DateTimeOffset Now = new(2026, 10, 15, 9, 30, 0, TimeSpan.Zero);
 
     // IsInFlight is computed, so EF can't translate it: the include needs its own copy, as the real one will.
@@ -29,7 +31,7 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
             character.SubmitRequest(ProbeTargetKind.Trait, key, Now).SetStatus(status);
         }
         db.Characters.Add(character);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(Ct);
         return character.Id;
     }
 
@@ -108,8 +110,8 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
         a.SubmitRequest(ProbeTargetKind.Trait, "wits", Now.AddMinutes(1));
         b.SubmitRequest(ProbeTargetKind.Trait, "dexterity", Now.AddMinutes(1));
 
-        await first.SaveChangesAsync();
-        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+        await first.SaveChangesAsync(Ct);
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync(Ct));
         Assert.Equal(2, await RequestCountAsync(id));
     }
 
@@ -127,8 +129,8 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
         a.SubmitRequest(ProbeTargetKind.Trait, "wits", Now.AddMinutes(1), writeTimestamp: false);
         b.SubmitRequest(ProbeTargetKind.Trait, "dexterity", Now.AddMinutes(1), writeTimestamp: false);
 
-        await first.SaveChangesAsync();
-        await second.SaveChangesAsync();
+        await first.SaveChangesAsync(Ct);
+        await second.SaveChangesAsync(Ct);
         Assert.Equal(3, await RequestCountAsync(id));
     }
 

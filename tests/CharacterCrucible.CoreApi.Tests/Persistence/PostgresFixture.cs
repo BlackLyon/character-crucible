@@ -21,14 +21,14 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public string ConnectionString => _container.GetConnectionString();
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _container.StartAsync();
         await using var db = NewContext();
         await db.Database.MigrateAsync();
     }
 
-    public async Task DisposeAsync() => await _container.DisposeAsync();
+    public ValueTask DisposeAsync() => _container.DisposeAsync();
 
     /// <summary>A fresh context, so a reload is a genuine round-trip and not the change tracker.</summary>
     public CharacterCrucibleDbContext NewContext() =>

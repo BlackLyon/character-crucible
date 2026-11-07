@@ -1,6 +1,5 @@
 ﻿using CharacterCrucible.EfProbes.Model;
 using Microsoft.EntityFrameworkCore;
-using Xunit.Abstractions;
 
 namespace CharacterCrucible.EfProbes;
 
@@ -11,6 +10,8 @@ namespace CharacterCrucible.EfProbes;
 [Collection(ProbeCollection.Name)]
 public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHelper output)
 {
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     private async Task<Guid> InsertAsync(params (string Key, int Rating)[] traits)
     {
         await using var db = postgres.NewContext();
@@ -20,7 +21,7 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
             character.SetTrait(key, rating);
         }
         db.Characters.Add(character);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(Ct);
         return character.Id;
     }
 
@@ -31,16 +32,16 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
 
         await using (var db = postgres.NewContext())
         {
-            var character = await db.Characters.SingleAsync(c => c.Id == id);
+            var character = await db.Characters.SingleAsync(c => c.Id == id, Ct);
             postgres.Sql.Clear();
             character.SetTrait("dexterity", 5);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
             output.WriteLine(string.Join("\n---\n", postgres.Sql));
             Assert.Contains("SET traits = @", Assert.Single(postgres.Sql, s => s.Contains("UPDATE")));
         }
 
         await using var reload = postgres.NewContext();
-        var traits = (await reload.Characters.SingleAsync(c => c.Id == id)).Traits;
+        var traits = (await reload.Characters.SingleAsync(c => c.Id == id, Ct)).Traits;
         Assert.Equal(
             [new TraitValue("strength", 2), new TraitValue("dexterity", 5), new TraitValue("wits", 1)],
             traits);
@@ -64,7 +65,7 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
         output.WriteLine(sql);
 
         Assert.Contains("jsonb_to_recordset", sql);
-        Assert.Equal([qualifies], await query.ToListAsync());
+        Assert.Equal([qualifies], await query.ToListAsync(Ct));
     }
 
     // A projection, unlike a Where, may silently fall back to client evaluation, so the SQL is
@@ -83,8 +84,8 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
         output.WriteLine(sql);
         Assert.Contains("jsonb_to_recordset", sql);
 
-        Assert.Equal(4, await RatingOf("dexterity").SingleAsync());
-        Assert.Null(await RatingOf("wits").SingleAsync());
+        Assert.Equal(4, await RatingOf("dexterity").SingleAsync(Ct));
+        Assert.Null(await RatingOf("wits").SingleAsync(Ct));
     }
 
     // Character holds two jsonb collections, and timestamptz conventions do not reach inside JSON.
@@ -99,12 +100,12 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
             character.SetTrait("strength", 2);
             character.AddAbility("hadoken", acquired);
             db.Characters.Add(character);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
             id = character.Id;
         }
 
         await using var reload = postgres.NewContext();
-        var held = Assert.Single((await reload.Characters.SingleAsync(c => c.Id == id)).Abilities);
+        var held = Assert.Single((await reload.Characters.SingleAsync(c => c.Id == id, Ct)).Abilities);
         Assert.Equal("hadoken", held.AbilityKey);
         Assert.Equal(acquired, held.AcquiredDate);
         Assert.Equal(acquired.Offset, held.AcquiredDate.Offset);

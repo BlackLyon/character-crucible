@@ -46,7 +46,11 @@ services:
   # the verification run that cannot be blocked. See notes/dev-environment.md.
   #
   #   docker compose run --rm tests
-  #   docker compose run --rm tests dotnet test --filter FullyQualifiedName~FieldLength
+  #   docker compose run --rm tests dotnet test --artifacts-path /artifacts \
+  #     --project tests/CharacterCrucible.CoreApi.Tests --filter-class '*FieldLength*'
+  #
+  # Filter within one project: across the solution, every project the filter empties reports
+  # "zero tests ran", and that fails the run.
   #
   # Behind a profile, so `docker compose up` does not start it.
   #

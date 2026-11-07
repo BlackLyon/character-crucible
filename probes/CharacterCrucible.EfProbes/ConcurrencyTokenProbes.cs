@@ -1,6 +1,5 @@
 ﻿using CharacterCrucible.EfProbes.Model;
 using Microsoft.EntityFrameworkCore;
-using Xunit.Abstractions;
 
 namespace CharacterCrucible.EfProbes;
 
@@ -8,20 +7,22 @@ namespace CharacterCrucible.EfProbes;
 [Collection(ProbeCollection.Name)]
 public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHelper output)
 {
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     private async Task<Guid> InsertAsync()
     {
         await using var db = postgres.NewContext();
         var character = new ProbeCharacter("Probe");
         character.SetTrait("strength", 2);
         db.Characters.Add(character);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(Ct);
         return character.Id;
     }
 
     private async Task<uint> CurrentVersionAsync(Guid id)
     {
         await using var db = postgres.NewContext();
-        return (await db.Characters.SingleAsync(c => c.Id == id)).RowVersion;
+        return (await db.Characters.SingleAsync(c => c.Id == id, Ct)).RowVersion;
     }
 
     private string SingleUpdate()
@@ -42,7 +43,7 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
 
         var columns = await db.Database
             .SqlQuery<string>($"select column_name as \"Value\" from information_schema.columns where table_schema = 'probes' and table_name = 'character'")
-            .ToListAsync();
+            .ToListAsync(Ct);
         output.WriteLine(string.Join(", ", columns));
         Assert.Contains("traits", columns);
         Assert.DoesNotContain("xmin", columns);
@@ -55,13 +56,13 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         var id = await InsertAsync();
 
         await using var db = postgres.NewContext();
-        var character = await db.Characters.SingleAsync(c => c.Id == id);
+        var character = await db.Characters.SingleAsync(c => c.Id == id, Ct);
         var before = character.RowVersion;
         Assert.NotEqual(0u, before);
 
         postgres.Sql.Clear();
         character.SetTrait("strength", 3);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(Ct);
 
         var update = SingleUpdate();
         Assert.Contains("xmin = @", update);
@@ -77,14 +78,14 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
 
         await using var first = postgres.NewContext();
         await using var second = postgres.NewContext();
-        var a = await first.Characters.SingleAsync(c => c.Id == id);
-        var b = await second.Characters.SingleAsync(c => c.Id == id);
+        var a = await first.Characters.SingleAsync(c => c.Id == id, Ct);
+        var b = await second.Characters.SingleAsync(c => c.Id == id, Ct);
 
         a.SetTrait("strength", 3);
-        await first.SaveChangesAsync();
+        await first.SaveChangesAsync(Ct);
 
         b.SetTrait("dexterity", 4);
-        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync(Ct));
     }
 
     // The apply path: the Core API loads fresh, then checks against the version the worker
@@ -97,22 +98,22 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
 
         await using (var apply = postgres.NewContext())
         {
-            var character = await apply.Characters.SingleAsync(c => c.Id == id);
+            var character = await apply.Characters.SingleAsync(c => c.Id == id, Ct);
             apply.Entry(character).Property(c => c.RowVersion).OriginalValue = evaluatedAgainst;
             character.SetTrait("strength", 3);
             postgres.Sql.Clear();
-            await apply.SaveChangesAsync();
+            await apply.SaveChangesAsync(Ct);
             Assert.Contains("xmin = @", SingleUpdate());
         }
 
         // That apply moved the character on, so the worker's version is now stale.
         await using (var apply = postgres.NewContext())
         {
-            var character = await apply.Characters.SingleAsync(c => c.Id == id);
+            var character = await apply.Characters.SingleAsync(c => c.Id == id, Ct);
             Assert.NotEqual(evaluatedAgainst, character.RowVersion);
             apply.Entry(character).Property(c => c.RowVersion).OriginalValue = evaluatedAgainst;
             character.SetTrait("strength", 4);
-            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => apply.SaveChangesAsync());
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => apply.SaveChangesAsync(Ct));
         }
     }
 
@@ -124,22 +125,22 @@ public class ConcurrencyTokenProbes(PostgresProbeFixture postgres, ITestOutputHe
         {
             var created = new CountedCharacter("Counted");
             db.CountedCharacters.Add(created);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(Ct);
             id = created.Id;
         }
 
         await using var first = postgres.NewContext();
         await using var second = postgres.NewContext();
-        var a = await first.CountedCharacters.SingleAsync(c => c.Id == id);
-        var b = await second.CountedCharacters.SingleAsync(c => c.Id == id);
+        var a = await first.CountedCharacters.SingleAsync(c => c.Id == id, Ct);
+        var b = await second.CountedCharacters.SingleAsync(c => c.Id == id, Ct);
 
         a.SetTrait("strength", 3);
-        await first.SaveChangesAsync();
+        await first.SaveChangesAsync(Ct);
 
         b.SetTrait("dexterity", 4);
-        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync(Ct));
 
         await using var reload = postgres.NewContext();
-        Assert.Equal(1, (await reload.CountedCharacters.SingleAsync(c => c.Id == id)).RowVersion);
+        Assert.Equal(1, (await reload.CountedCharacters.SingleAsync(c => c.Id == id, Ct)).RowVersion);
     }
 }
