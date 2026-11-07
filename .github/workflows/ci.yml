@@ -8,10 +8,11 @@ on:
   push:
     branches: [main]
 
-# A new push to a PR cancels the run it supersedes.
+# A new push to a PR cancels the run it supersedes. Runs on main are never cancelled, so every
+# merged commit gets a result.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -32,9 +33,11 @@ jobs:
         run: dotnet restore
 
       # -warnaserror is the "0 warnings" rule in CLAUDE.md, enforced rather than remembered.
+      # Debug, like every local run, so CI and the compose tests service build the same thing.
       - name: Build
-        run: dotnet build --no-restore --configuration Release -warnaserror
+        run: dotnet build --no-restore -warnaserror
 
-      # Docker is preinstalled on ubuntu-latest, so Testcontainers needs no setup here.
+      # Docker is preinstalled on ubuntu-latest, so Testcontainers needs no setup here. The hang
+      # timeout turns a stuck container into a named failing test rather than a job timeout.
       - name: Test
-        run: dotnet test --no-build --configuration Release
+        run: dotnet test --no-build --blame-hang-timeout 5m

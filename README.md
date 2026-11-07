@@ -30,8 +30,8 @@ The project is being built in stages, domain first. Nothing runs end to end yet.
   persistence design depends on, before the real configuration relies on them. See
   [probes/](probes/README.md).
 - **An architecture test** enforces the module boundaries.
-- **CI** builds at zero warnings and runs the whole suite, probes included, on every pull request.
-  Nothing deploys yet.
+- **CI** builds at zero warnings and runs the whole suite, probes included, on every pull request
+  and every merge to `main`. Nothing deploys yet.
 - **Not started:** endpoints, authentication, the message pipeline, the Rules evaluator, the
   front end, and deployment.
 
