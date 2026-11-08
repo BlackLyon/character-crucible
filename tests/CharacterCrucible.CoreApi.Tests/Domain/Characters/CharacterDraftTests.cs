@@ -7,14 +7,16 @@ namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 public class CharacterDraftTests
 {
     [Fact]
-    public void UpdateDraft_refuses_a_character_awaiting_review_and_keeps_its_sheet()
+    public void Updating_a_draft_replaces_the_whole_sheet()
     {
-        var character = PendingApproval();
-        var before = character.Traits.ToList();
+        var character = Draft(sheet: Sheet(
+            traits: [new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)],
+            abilities: [new CharacterAbility("riposte", null)]));
 
-        Assert.Throws<InvalidOperationException>(() =>
-            character.UpdateDraft(Sheet(traits: [new CharacterTrait("strength", 4)])));
+        character.UpdateDraft(Sheet(traits: [new CharacterTrait("wits", 3)], abilities: []));
 
-        Assert.Equal(before, character.Traits);
+        // Replaced, not merged: traits and abilities missing from the new sheet are gone.
+        Assert.Equal([new CharacterTrait("wits", 3)], character.Traits);
+        Assert.Empty(character.Abilities);
     }
 }

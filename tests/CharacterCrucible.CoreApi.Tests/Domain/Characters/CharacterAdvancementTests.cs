@@ -6,16 +6,13 @@ namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 public class CharacterAdvancementTests
 {
     [Fact]
-    public void SubmitRequest_refuses_a_second_request_for_an_item_already_in_flight()
+    public void A_character_awaiting_review_cannot_submit_a_request()
     {
-        var character = Active();
-        character.SubmitRequest(TraitRequest(character, "strength"));
-        var stamped = character.LastRequestSubmittedAt;
+        var character = PendingApproval();
 
-        Assert.Throws<InvalidOperationException>(() =>
-            character.SubmitRequest(TraitRequest(character, "strength", rating: 4)));
+        Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(TraitRequest(character)));
 
-        // Refused before the timestamp moved. The race guard depends on that write.
-        Assert.Equal(stamped, character.LastRequestSubmittedAt);
+        // Null, not merely unchanged: it has never been set, so any write would show.
+        Assert.Null(character.LastRequestSubmittedAt);
     }
 }

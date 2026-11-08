@@ -43,20 +43,24 @@ public class CharacterCrucibleDbContext(DbContextOptions<CharacterCrucibleDbCont
         // Restrict: a referenced version can't be deleted. Published ones never are; this stops a
         // draft being deleted out from under history.
         modelBuilder.Entity<Character>()
-            .HasOne<RulesetVersion>().WithMany()
-            .HasForeignKey(c => c.RulesetVersionId)
-            .OnDelete(DeleteBehavior.Restrict);
+                    .HasOne<RulesetVersion>()
+                    .WithMany()
+                    .HasForeignKey(c => c.RulesetVersionId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
+        // Named, because the default passes Postgres's 63-character limit and is truncated.
         modelBuilder.Entity<AdvancementRequest>()
-            .HasOne<RulesetVersion>().WithMany()
-            .HasForeignKey(r => r.EvaluatedRulesetVersionId)
-            .OnDelete(DeleteBehavior.Restrict)
-            .HasConstraintName("fk_advancement_request_evaluated_ruleset_version");   // the default passes 63 characters and is truncated
+                    .HasOne<RulesetVersion>()
+                    .WithMany()
+                    .HasForeignKey(r => r.EvaluatedRulesetVersionId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("fk_advancement_request_evaluated_ruleset_version");
 
         modelBuilder.Entity<AuditEntry>()
-            .HasOne<RulesetVersion>().WithMany()
-            .HasForeignKey(a => a.RulesetVersionId)
-            .OnDelete(DeleteBehavior.Restrict);
+                    .HasOne<RulesetVersion>()
+                    .WithMany()
+                    .HasForeignKey(a => a.RulesetVersionId)
+                    .OnDelete(DeleteBehavior.Restrict);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -6,7 +6,7 @@ namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 public class CharacterXpTests
 {
     [Fact]
-    public void GrantXp_refuses_a_character_not_yet_in_play_and_leaves_its_balances()
+    public void A_character_not_yet_in_play_cannot_be_granted_xp_and_keeps_its_balances()
     {
         var character = PendingApproval();
 

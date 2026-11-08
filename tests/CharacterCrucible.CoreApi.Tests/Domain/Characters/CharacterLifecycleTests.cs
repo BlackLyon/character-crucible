@@ -7,7 +7,7 @@ namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 public class CharacterLifecycleTests
 {
     [Fact]
-    public void SendBack_refuses_an_active_character_and_leaves_it_active()
+    public void An_active_character_cannot_be_sent_back_and_stays_active()
     {
         var character = Active();
 

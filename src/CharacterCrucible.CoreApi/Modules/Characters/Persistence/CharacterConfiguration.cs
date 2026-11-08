@@ -32,7 +32,8 @@ public class CharacterConfiguration : IEntityTypeConfiguration<Character>
 
             // The context's timestamptz convention reaches into JSON too, and the migration
             // snapshot then emits a HasColumnType call that doesn't compile (EF Core 10.0.12).
-            // A JSON property has no column type, so clearing it loses nothing.
+            // A JSON property has no column type, so clearing it loses nothing. Every DateTimeOffset
+            // inside JSON needs this line until EF is fixed; without it, the next migration won't build.
             abilities.Property(a => a.AcquiredDate).HasAnnotation(RelationalAnnotationNames.ColumnType, null);
         });
         builder.Ignore(c => c.Traits);

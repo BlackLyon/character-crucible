@@ -7,7 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 namespace CharacterCrucible.CoreApi.Tests.Builders;
 
 /// <summary>
-/// Characters in each starting state, built only through the domain's public methods, so a
+/// Characters in each starting state, built only through the domain's own methods and factories, so a
 /// builder can't produce a state the domain can't reach. Change the arguments, not the path.
 /// </summary>
 internal static class TestCharacters

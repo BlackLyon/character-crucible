@@ -118,18 +118,21 @@ diff, are jsonb. Requests, the ledger and the audit trail are child tables of `c
   a draft; character creation will have to.
 - **"In flight" is written three times**: `IsInFlight`, the include in
   `CharacterQueries.WithInFlightRequests`, and the filter on the one-request-per-item index. A
-  mapping test checks all three agree for every status. Change one, change all three.
+  mapping test checks all three agree for every status. Change one, change all three. The include
+  filters only what it loads: requests the context already tracks still join the collection.
 - **`AdvancementRequestId` on the ledger and audit rows is copied** from `request.Id`, not written
   by EF. A request is always saved before it's applied, so the copy is real, and the FK makes a
   wrong one fail at save. Only an in-memory test sees `Guid.Empty` there.
 - **JSON keys keep their C# names** (`TraitKey`, `Summary`): the snake-case convention renames
   columns, not keys. The one exception is `Changes`, named explicitly so the
   private `ChangeData` member doesn't become the stored format.
+- **A `DateTimeOffset` inside JSON needs one extra line** in its configuration, or the next
+  migration's generated code won't compile. EF Core 10.0.12 bug; see `CharacterConfiguration`.
 
 ## Not built yet
 
-- **The orchestrator**: the application code that loads a character with its in-flight requests,
-  calls Rules, and decides between `ApplyAdvancement` and `MarkFailed`. It comes with the
+- **The orchestrator**: the application code that loads a character with its in-flight requests
+  (the query exists: `WithInFlightRequests`), calls Rules, and decides between `ApplyAdvancement` and `MarkFailed`. It comes with the
   endpoints and the worker.
 - **Moving a character to a new ruleset version.** `RulesetVersionId` is designed to move, but no
   method changes it yet. Until one does, the apply-time ruleset check can't fail. It's parked with
