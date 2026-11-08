@@ -23,14 +23,16 @@ public sealed class PostgresProbeFixture : IAsyncLifetime
     /// </summary>
     public List<string> Sql { get; } = [];
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
-        await _container.StartAsync();
+        // The run's token, so --timeout can stop a container that never becomes ready.
+        var ct = TestContext.Current.CancellationToken;
+        await _container.StartAsync(ct);
         await using var db = NewContext();
-        await db.Database.EnsureCreatedAsync();
+        await db.Database.EnsureCreatedAsync(ct);
     }
 
-    public async Task DisposeAsync() => await _container.DisposeAsync();
+    public ValueTask DisposeAsync() => _container.DisposeAsync();
 
     public ProbeDbContext NewContext() =>
         new(new DbContextOptionsBuilder<ProbeDbContext>()

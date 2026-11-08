@@ -20,6 +20,8 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
         || r.RequestStatus == ProbeRequestStatus.PendingApproval
         || r.RequestStatus == ProbeRequestStatus.Approved;
 
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     private async Task<Guid> InsertAsync(params (string Key, ProbeRequestStatus Status)[] requests)
     {
         await using var db = postgres.NewContext();
@@ -29,24 +31,25 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
             character.SubmitRequest(ProbeTargetKind.Trait, key, Now).SetStatus(status);
         }
         db.Characters.Add(character);
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(Ct);
         return character.Id;
     }
 
     private static Task<ProbeCharacter> LoadWithInFlightAsync(ProbeDbContext db, Guid id) =>
         db.Characters
             .Include(c => EF.Property<IList<ProbeRequest>>(c, "_requests").AsQueryable().Where(InFlight))
-            .SingleAsync(c => c.Id == id);
+            .SingleAsync(c => c.Id == id, Ct);
 
     private async Task<int> RequestCountAsync(Guid id)
     {
         await using var db = postgres.NewContext();
-        return await db.Set<ProbeRequest>().CountAsync(r => r.CharacterId == id);
+        return await db.Set<ProbeRequest>().CountAsync(r => r.CharacterId == id, Ct);
     }
 
     private Task InsertRawAsync(ProbeDbContext db, Guid characterId, ProbeTargetKind kind, string key) =>
         db.Database.ExecuteSqlAsync(
-            $"insert into probes.advancement_request (id, character_id, target_kind, target_key, request_status) values ({Guid.NewGuid()}, {characterId}, {(int)kind}, {key}, {(int)ProbeRequestStatus.Queued})");
+            $"insert into probes.advancement_request (id, character_id, target_kind, target_key, request_status) values ({Guid.NewGuid()}, {characterId}, {(int)kind}, {key}, {(int)ProbeRequestStatus.Queued})",
+            Ct);
 
     [Theory]
     [InlineData(ProbeRequestStatus.Abandoned)]
@@ -108,8 +111,8 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
         a.SubmitRequest(ProbeTargetKind.Trait, "wits", Now.AddMinutes(1));
         b.SubmitRequest(ProbeTargetKind.Trait, "dexterity", Now.AddMinutes(1));
 
-        await first.SaveChangesAsync();
-        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+        await first.SaveChangesAsync(Ct);
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync(Ct));
         Assert.Equal(2, await RequestCountAsync(id));
     }
 
@@ -127,8 +130,8 @@ public class RequestLimitProbes(PostgresProbeFixture postgres)
         a.SubmitRequest(ProbeTargetKind.Trait, "wits", Now.AddMinutes(1), writeTimestamp: false);
         b.SubmitRequest(ProbeTargetKind.Trait, "dexterity", Now.AddMinutes(1), writeTimestamp: false);
 
-        await first.SaveChangesAsync();
-        await second.SaveChangesAsync();
+        await first.SaveChangesAsync(Ct);
+        await second.SaveChangesAsync(Ct);
         Assert.Equal(3, await RequestCountAsync(id));
     }
 

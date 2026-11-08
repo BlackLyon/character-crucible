@@ -128,7 +128,7 @@ public class ModuleBoundaryTests
             $"boundary test: {string.Join(", ", orphans)}");
     }
 
-    private static string Describe(string from, string to, TestResult result)
+    private static string Describe(string from, string to, NetArchTest.Rules.TestResult result)
     {
         var offenders = result.FailingTypeNames ?? [];
         return $"{from} must not depend on {to}. Offending types:{Environment.NewLine}" +

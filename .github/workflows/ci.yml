@@ -37,7 +37,8 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -warnaserror
 
-      # Docker is preinstalled on ubuntu-latest, so Testcontainers needs no setup here. The hang
-      # timeout turns a stuck container into a named failing test rather than a job timeout.
+      # Docker is preinstalled on ubuntu-latest, so Testcontainers needs no setup here. The timeout
+      # aborts (exit 3) a run stuck in code that takes the test's token; anything else waits out the
+      # job's 15 minutes. A project that runs zero tests fails (exit 8) unless its csproj opts out.
       - name: Test
-        run: dotnet test --no-build --blame-hang-timeout 5m
+        run: dotnet test --no-build --timeout 5m
