@@ -23,6 +23,333 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.AdvancementRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("character_id");
+
+                    b.Property<string>("EvaluatedEngineVersion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("evaluated_engine_version");
+
+                    b.Property<Guid>("EvaluatedRulesetVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluated_ruleset_version_id");
+
+                    b.Property<int>("QuotedCost")
+                        .HasColumnType("integer")
+                        .HasColumnName("quoted_cost");
+
+                    b.Property<int>("RequestStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("request_status");
+
+                    b.Property<string>("ResolutionReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("resolution_reason");
+
+                    b.Property<DateTimeOffset?>("ResolvedDate")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("resolved_date");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<DateTimeOffset?>("ReviewedDate")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("reviewed_date");
+
+                    b.Property<Guid>("SubmittedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("submitted_by");
+
+                    b.Property<DateTimeOffset>("SubmittedDate")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("submitted_date");
+
+                    b.Property<string>("TargetKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("target_key");
+
+                    b.Property<int>("TargetKind")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_kind");
+
+                    b.Property<int?>("TargetRating")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_rating");
+
+                    b.HasKey("Id")
+                        .HasName("pk_advancement_request");
+
+                    b.HasIndex("CharacterId")
+                        .HasDatabaseName("ix_advancement_request_character_id");
+
+                    b.HasIndex("EvaluatedRulesetVersionId")
+                        .HasDatabaseName("ix_advancement_request_evaluated_ruleset_version_id");
+
+                    b.HasIndex("CharacterId", "TargetKind", "TargetKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_advancement_request_one_in_flight_per_item")
+                        .HasFilter("request_status IN (3, 5, 6)");
+
+                    b.ToTable("advancement_request", "characters");
+                });
+
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.AuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer")
+                        .HasColumnName("action");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<int>("ActorRole")
+                        .HasColumnType("integer")
+                        .HasColumnName("actor_role");
+
+                    b.Property<Guid?>("AdvancementRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("advancement_request_id");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("character_id");
+
+                    b.Property<string>("EngineVersion")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("engine_version");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("RulesetVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ruleset_version_id");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Change", "CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.AuditEntry.Change#AuditChange", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("Summary")
+                                .IsRequired();
+
+                            b1.ComplexCollection(typeof(List<Dictionary<string, object>>), "ChangeData", "CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.AuditEntry.Change#AuditChange.ChangeData#ChangeEntry", b2 =>
+                                {
+                                    b2.IsRequired();
+
+                                    b2.Property<string>("From");
+
+                                    b2.Property<string>("Label")
+                                        .IsRequired();
+
+                                    b2.Property<string>("Path")
+                                        .IsRequired();
+
+                                    b2.Property<string>("To");
+
+                                    b2.HasJsonPropertyName("Changes");
+                                });
+
+                            b1
+                                .ToJson("change")
+                                .HasColumnType("jsonb");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_audit_entry");
+
+                    b.HasIndex("AdvancementRequestId")
+                        .HasDatabaseName("ix_audit_entry_advancement_request_id");
+
+                    b.HasIndex("RulesetVersionId")
+                        .HasDatabaseName("ix_audit_entry_ruleset_version_id");
+
+                    b.HasIndex("CharacterId", "OccurredAt")
+                        .HasDatabaseName("ix_audit_entry_character_id_occurred_at");
+
+                    b.ToTable("audit_entry", "characters");
+                });
+
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.Character", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Age")
+                        .HasColumnType("integer")
+                        .HasColumnName("age");
+
+                    b.Property<string>("ArchetypeKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("archetype_key");
+
+                    b.Property<DateTimeOffset>("CreatedDate")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_date");
+
+                    b.Property<DateTimeOffset?>("LastRequestSubmittedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("last_request_submitted_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("Race")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("race");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("RulesetVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ruleset_version_id");
+
+                    b.Property<int>("Sex")
+                        .HasColumnType("integer")
+                        .HasColumnName("sex");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TotalEarnedXp")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_earned_xp");
+
+                    b.Property<int>("UnspentXp")
+                        .HasColumnType("integer")
+                        .HasColumnName("unspent_xp");
+
+                    b.ComplexCollection(typeof(List<Dictionary<string, object>>), "_abilities", "CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.Character._abilities#CharacterAbility", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("AbilityKey")
+                                .IsRequired();
+
+                            b1.Property<DateTimeOffset?>("AcquiredDate");
+
+                            b1
+                                .ToJson("abilities")
+                                .HasColumnType("jsonb");
+                        });
+
+                    b.ComplexCollection(typeof(List<Dictionary<string, object>>), "_traits", "CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.Character._traits#CharacterTrait", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<int>("Rating");
+
+                            b1.Property<string>("TraitKey")
+                                .IsRequired();
+
+                            b1
+                                .ToJson("traits")
+                                .HasColumnType("jsonb");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_character");
+
+                    b.HasIndex("RulesetVersionId")
+                        .HasDatabaseName("ix_character_ruleset_version_id");
+
+                    b.ToTable("character", "characters");
+                });
+
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.XpLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AdvancementRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("advancement_request_id");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("character_id");
+
+                    b.Property<int>("Delta")
+                        .HasColumnType("integer")
+                        .HasColumnName("delta");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("reason");
+
+                    b.Property<int>("TotalEarnedXpAfter")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_earned_xp_after");
+
+                    b.Property<int>("UnspentXpAfter")
+                        .HasColumnType("integer")
+                        .HasColumnName("unspent_xp_after");
+
+                    b.HasKey("Id")
+                        .HasName("pk_xp_ledger_entry");
+
+                    b.HasIndex("AdvancementRequestId")
+                        .HasDatabaseName("ix_xp_ledger_entry_advancement_request_id");
+
+                    b.HasIndex("CharacterId", "OccurredAt")
+                        .HasDatabaseName("ix_xp_ledger_entry_character_id_occurred_at");
+
+                    b.ToTable("xp_ledger_entry", "characters");
+                });
+
             modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.AbilityDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -470,6 +797,72 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                     b.ToTable("trait_definition", "rulesets");
                 });
 
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.AdvancementRequest", b =>
+                {
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.Character", null)
+                        .WithMany("_requests")
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_advancement_request_character_character_id");
+
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.RulesetVersion", null)
+                        .WithMany()
+                        .HasForeignKey("EvaluatedRulesetVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_advancement_request_evaluated_ruleset_version");
+                });
+
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.AuditEntry", b =>
+                {
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.AdvancementRequest", null)
+                        .WithMany()
+                        .HasForeignKey("AdvancementRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_audit_entry_advancement_request_advancement_request_id");
+
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.Character", null)
+                        .WithMany("_auditEntries")
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_audit_entry_character_character_id");
+
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.RulesetVersion", null)
+                        .WithMany()
+                        .HasForeignKey("RulesetVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_audit_entry_ruleset_version_ruleset_version_id");
+                });
+
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.Character", b =>
+                {
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.RulesetVersion", null)
+                        .WithMany()
+                        .HasForeignKey("RulesetVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_character_ruleset_version_ruleset_version_id");
+                });
+
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.XpLedgerEntry", b =>
+                {
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.AdvancementRequest", null)
+                        .WithMany()
+                        .HasForeignKey("AdvancementRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_xp_ledger_entry_advancement_request_advancement_request_id");
+
+                    b.HasOne("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.Character", null)
+                        .WithMany("_xpLedgerEntries")
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_xp_ledger_entry_character_character_id");
+                });
+
             modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.AbilityDefinition", b =>
                 {
                     b.HasOne("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.RulesetVersion", null)
@@ -535,6 +928,15 @@ namespace CharacterCrucible.CoreApi.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_trait_definition_ruleset_versions_ruleset_version_id");
+                });
+
+            modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities.Character", b =>
+                {
+                    b.Navigation("_auditEntries");
+
+                    b.Navigation("_requests");
+
+                    b.Navigation("_xpLedgerEntries");
                 });
 
             modelBuilder.Entity("CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities.Ruleset", b =>

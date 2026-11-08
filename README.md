@@ -23,8 +23,8 @@ The project is being built in stages, domain first. Nothing runs end to end yet.
 - **`Rulesets`:** written, mapped to Postgres with EF Core, and covered by a Testcontainers
   round-trip test. That includes the two-phase publish of an immutable version.
 - **`Characters`:** the domain is written. That covers characters, their review and play status, XP
-  with a ledger and an audit trail, and advancement requests from submission to apply. Its EF
-  configuration and its tests are next. See
+  with a ledger and an audit trail, and advancement requests from submission to apply. It's mapped
+  to Postgres and covered by Testcontainers mapping tests. The tests of its methods are next. See
   [its README](src/CharacterCrucible.CoreApi/Modules/Characters/README.md).
 - **EF probes:** a test project that pins down how EF Core and Npgsql behave, the facts the
   persistence design depends on, before the real configuration relies on them. See
