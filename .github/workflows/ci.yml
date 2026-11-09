@@ -23,11 +23,17 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v7
+      # Pinned to a commit, since a tag can be moved to different code. The comment is the release.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-dotnet@v6
+      # The SDK comes from global.json: 10.0.401 or newer. The runner may already have a newer one.
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
+
+      # The SDK that actually ran, so a failure that only happens in CI can be traced to it.
+      - name: SDK version
+        run: dotnet --version
 
       - name: Restore
         run: dotnet restore

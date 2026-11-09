@@ -47,7 +47,7 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
             traits);
     }
 
-    // The "who qualifies for ability X" query from the persistence falsifier in characters.md.
+    // "Who qualifies for ability X?" If that query ever becomes common, jsonb traits need revisiting.
     [Fact]
     public async Task A_filter_on_trait_key_and_rating_runs_in_the_database()
     {
@@ -88,7 +88,8 @@ public class TraitCollectionProbes(PostgresProbeFixture postgres, ITestOutputHel
         Assert.Null(await RatingOf("wits").SingleAsync(Ct));
     }
 
-    // Character holds two jsonb collections, and timestamptz conventions do not reach inside JSON.
+    // Character holds two jsonb collections, and the offset must survive inside JSON. This context has
+    // no timestamptz convention; the real one does, and it reaches into JSON (see CharacterConfiguration).
     [Fact]
     public async Task A_second_jsonb_collection_round_trips_a_DateTimeOffset_with_its_offset()
     {

@@ -2,10 +2,10 @@
 
 namespace CharacterCrucible.EfProbes.Model;
 
-/// <summary>A trait rating, as notes/domain/characters.md specifies it.</summary>
+/// <summary>A trait rating, shaped like the real CharacterTrait.</summary>
 public record TraitValue(string TraitKey, int Rating);
 
-/// <summary>An acquired ability, as notes/domain/characters.md specifies it.</summary>
+/// <summary>An acquired ability, shaped like the real CharacterAbility once its date is set.</summary>
 public record HeldAbility(string AbilityKey, DateTimeOffset AcquiredDate);
 
 /// <summary>

@@ -12,13 +12,6 @@ public class RulesetVersionConfiguration : IEntityTypeConfiguration<RulesetVersi
     {
         builder.ToTable("ruleset_version", RulesetsSchema.Name);
 
-        builder.HasKey(v => v.Id);
-
-        builder.Property(v => v.MajorVersion).IsRequired();
-        builder.Property(v => v.MinorVersion).IsRequired();
-        builder.Property(v => v.ReleaseType).IsRequired();
-        builder.Property(v => v.ReleaseNotes);
-
         // Derived from whether Publication is set, so there is no column. Published and "has a
         // publication record" are one fact; a stored copy could disagree with it.
         builder.Ignore(v => v.Status);
@@ -62,12 +55,6 @@ public class RulesetVersionConfiguration : IEntityTypeConfiguration<RulesetVersi
             publication.Property(p => p.ContentHash).HasMaxLength(FieldLengths.ContentHash);
             publication.Property(p => p.RulesetName).HasMaxLength(FieldLengths.Name);
             publication.Property(p => p.Publisher).HasMaxLength(FieldLengths.Publisher);
-
-            // Nullable by necessity: a draft has no publication, and the partial index
-            // below filters on this column being NULL. The CHECK constraint is what makes
-            // it required-when-present. Added before the first publish so the index has an
-            // anchor, not because a later add-and-backfill would be unsafe.
-            publication.Property(p => p.SchemaVersion);
         });
 
         // Invariant 0. Implicit when the version was a single sequential int; needs saying with
@@ -97,7 +84,8 @@ public class RulesetVersionConfiguration : IEntityTypeConfiguration<RulesetVersi
         // The filter column is interchangeable *only because of the CHECK above*. Without it EF
         // and this index disagreed: EF decides Publication is null from content_hash alone (the
         // first required property alphabetically -- an implementation detail, not a contract),
-        // while this filter names schema_version. See rulesets.md for the measurements.
+        // while this filter names schema_version. Every publication column is nullable, since a
+        // draft has none; the CHECK is what makes them required when present.
         builder.HasIndex(v => v.RulesetId)
                .IsUnique()
                .HasFilter("publication_schema_version IS NULL")

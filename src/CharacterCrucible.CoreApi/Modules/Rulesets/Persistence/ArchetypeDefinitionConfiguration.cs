@@ -13,13 +13,8 @@ public class ArchetypeDefinitionConfiguration : IEntityTypeConfiguration<Archety
     {
         builder.ToTable("archetype_definition", RulesetsSchema.Name);
 
-        builder.HasKey(a => a.Id);
-
-        builder.Property(a => a.Key).HasMaxLength(FieldLengths.Key).IsRequired();
-        builder.Property(a => a.Name).HasMaxLength(FieldLengths.Name).IsRequired();
-        builder.Property(a => a.Description).IsRequired();
-        builder.Property(a => a.SortOrder).IsRequired();
-        builder.Property(a => a.IsAvailable).IsRequired();
+        builder.Property(a => a.Key).HasMaxLength(FieldLengths.Key);
+        builder.Property(a => a.Name).HasMaxLength(FieldLengths.Name);
 
         builder.HasIndex(a => new { a.RulesetVersionId, a.Key }).IsUnique();
 

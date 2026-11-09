@@ -33,9 +33,13 @@ public sealed class PostgresFixture : IAsyncLifetime
     public ValueTask DisposeAsync() => _container.DisposeAsync();
 
     /// <summary>A fresh context, so a reload is a genuine round-trip and not the change tracker.</summary>
-    public CharacterCrucibleDbContext NewContext() =>
-        new(new DbContextOptionsBuilder<CharacterCrucibleDbContext>()
-            .UseNpgsql(ConnectionString)
-            .UseSnakeCaseNamingConvention()
-            .Options);
+    public CharacterCrucibleDbContext NewContext() => ContextFor(ConnectionString);
+
+    /// <summary>A context configured as the app configures one. A null connection string is enough to read the model.</summary>
+    internal static CharacterCrucibleDbContext ContextFor(string? connectionString)
+    {
+        var options = new DbContextOptionsBuilder<CharacterCrucibleDbContext>();
+        options.UseCharacterCrucibleDatabase(connectionString);
+        return new(options.Options);
+    }
 }

@@ -7,9 +7,9 @@ to apply. Advancement lives here rather than in a module of its own. See
 > The full design record lives in `notes/`, which is **not** in this repository. This file
 > carries the reasoning a reader needs to work on the code without it.
 
-**State:** the domain is written. EF configuration, migrations and the tests of these methods come
-next. Nothing here is persisted yet, apart from what the [EF probes](../../../../probes/README.md)
-cover with stand-in types.
+**State:** the domain is written and mapped to Postgres, with mapping tests against a real
+database. The guard tests of these methods come next. Builders and one worked example per method
+family are in `tests/CharacterCrucible.CoreApi.Tests`, under `Builders/` and `Domain/Characters/`.
 
 ## The shape
 
@@ -103,10 +103,36 @@ then**, exactly, without storing a copy.
 `EngineVersion` is set exactly when Rules evaluated the change, and `AdvancementApplied` must name
 its request. Both are enforced in the constructor.
 
+## Persistence
+
+Four tables in the `characters` schema. The sheet's traits and abilities, and each audit row's
+diff, are jsonb. Requests, the ledger and the audit trail are child tables of `character`.
+
+- **Every FK is `Restrict`.** Requests, the ledger and the audit trail are history and outlive the
+  character. Deletion is designed but not built, and that design decides what happens to them;
+  until then the database refuses.
+- **The FKs into `Rulesets` are declared in the shared `DbContext`**, not here, because this
+  module's configuration may not name `RulesetVersion`. In C# they stay bare `Guid`s. They stop a
+  character, request or audit row pointing at a version that doesn't exist, and stop a draft
+  version being deleted while anything points at it. They don't stop a character being created on
+  a draft; character creation will have to.
+- **"In flight" is written three times**: `IsInFlight`, the include in
+  `CharacterQueries.WithInFlightRequests`, and the filter on the one-request-per-item index. A
+  mapping test checks all three agree for every status. Change one, change all three. The include
+  filters only what it loads: requests the context already tracks still join the collection.
+- **`AdvancementRequestId` on the ledger and audit rows is copied** from `request.Id`, not written
+  by EF. A request is always saved before it's applied, so the copy is real, and the FK makes a
+  wrong one fail at save. Only an in-memory test sees `Guid.Empty` there.
+- **JSON keys keep their C# names** (`TraitKey`, `Summary`): the snake-case convention renames
+  columns, not keys. The one exception is `Changes`, named explicitly so the
+  private `ChangeData` member doesn't become the stored format.
+- **A `DateTimeOffset` inside JSON needs one extra line** in its configuration, or the next
+  migration's generated code won't compile. EF Core 10.0.12 bug; see `CharacterConfiguration`.
+
 ## Not built yet
 
-- **The orchestrator**: the application code that loads a character with its in-flight requests,
-  calls Rules, and decides between `ApplyAdvancement` and `MarkFailed`. It comes with the
+- **The orchestrator**: the application code that loads a character with its in-flight requests
+  (the query exists: `WithInFlightRequests`), calls Rules, and decides between `ApplyAdvancement` and `MarkFailed`. It comes with the
   endpoints and the worker.
 - **Moving a character to a new ruleset version.** `RulesetVersionId` is designed to move, but no
   method changes it yet. Until one does, the apply-time ruleset check can't fail. It's parked with

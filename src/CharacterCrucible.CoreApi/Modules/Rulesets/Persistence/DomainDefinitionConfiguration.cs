@@ -13,12 +13,8 @@ public class DomainDefinitionConfiguration : IEntityTypeConfiguration<DomainDefi
     {
         builder.ToTable("domain_definition", RulesetsSchema.Name);
 
-        builder.HasKey(d => d.Id);
-
-        builder.Property(d => d.Key).HasMaxLength(FieldLengths.Key).IsRequired();
-        builder.Property(d => d.Name).HasMaxLength(FieldLengths.Name).IsRequired();
-        builder.Property(d => d.Description).IsRequired();
-        builder.Property(d => d.SortOrder).IsRequired();
+        builder.Property(d => d.Key).HasMaxLength(FieldLengths.Key);
+        builder.Property(d => d.Name).HasMaxLength(FieldLengths.Name);
 
         builder.HasIndex(d => new { d.RulesetVersionId, d.Key }).IsUnique();
 
