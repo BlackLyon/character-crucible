@@ -17,7 +17,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapHealthChecks("/health");
 
-// POST /evaluate lands here once the ruleset model exists.
+// POST /evaluate goes here once the evaluator is written.
 
 app.Run();
 

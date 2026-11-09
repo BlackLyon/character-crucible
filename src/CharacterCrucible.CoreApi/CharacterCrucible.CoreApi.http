@@ -1,6 +1,14 @@
-@CharacterCrucible.CoreApi_HostAddress = http://localhost:5156
+@CoreApi = http://localhost:5156
 
-GET {{CharacterCrucible.CoreApi_HostAddress}}/weatherforecast/
-Accept: application/json
+# Liveness: the process is up.
+GET {{CoreApi}}/health
 
 ###
+
+# Readiness: the database is reachable and fully migrated.
+GET {{CoreApi}}/health/ready
+
+###
+
+# Development only.
+GET {{CoreApi}}/openapi/v1.json

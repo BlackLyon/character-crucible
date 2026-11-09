@@ -14,10 +14,10 @@ namespace CharacterCrucible.CoreApi.Persistence;
 /// Rulesets module, and separate contexts cannot express a cross-module foreign key — the
 /// apply-time version check assumes that pointer is valid.
 /// <para>
-/// This type is the one place allowed to depend on every module, so the architecture test's
-/// module-boundary rule has to exempt the persistence layer rather than forbid all outside
-/// references. Configurations live in each module's own Persistence folder and are discovered
-/// below, so splitting into one context per module later stays mechanical.
+/// This type is the one place allowed to depend on every module, so a future architecture rule
+/// against outside references must exempt this namespace. Configurations live in each module's
+/// own Persistence folder and are discovered below, so splitting into one context per module
+/// later stays mechanical.
 /// </para>
 /// </remarks>
 public class CharacterCrucibleDbContext(DbContextOptions<CharacterCrucibleDbContext> options)

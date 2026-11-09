@@ -7,9 +7,6 @@ a version contains — domains, traits, abilities, archetypes — is **data**, n
 no expression language. The Rules service evaluates against this data and never reads a
 database.
 
-> The full design record lives in `notes/`, which is **not** in this repository. This file
-> carries the reasoning a reader needs to work on the code without it.
-
 ## The shape
 
 ```
@@ -27,8 +24,9 @@ addressable forever, because characters are pinned to the version they were eval
 ## Every version is a complete snapshot, not a delta
 
 `PublishedContent` holds **all** the rules of the system, not only what changed. A character
-on v2 is evaluated against v2's document and nothing else. What makes that true is that a new
-draft starts as a clone of the last published version.
+on v2 is evaluated against v2's document and nothing else. What will make that true is that a new
+draft starts as a clone of the last published version. *Not built yet:* `CreateDraft` makes an
+empty draft today.
 
 This is the decision the rest of the module falls out of. Because a published version can
 never change, the Rules service can cache its content by id **forever** — no polling, no
@@ -123,11 +121,14 @@ composite FK; the *"is published"* half is not, while `Status` is derived.
 
 Recorded so none of these reads as an oversight:
 
+- **`PublishedContent` is supplied by the caller.** `Publish` takes the snapshot as a string and
+  hashes it; generating it from the version's definitions, and checking that the two agree, is
+  not built yet.
 - **Deleting a published version.** `EnsureDraft()` guards all nine mutators and `Publish`, but
   nothing guards deletion. `Ruleset.Versions` uses `DeleteBehavior.Restrict`, so deleting a
   *ruleset* that has versions fails loudly — but deleting a version directly does not. There is
-  no caller today, and the intended cover is role separation at stage 6, where only the worker
-  and Admin may delete.
+  no caller today, and the intended cover is role separation once roles are enforced, when only
+  callers with the Worker or Admin role may delete, through the Core API.
 - **Invariant 4 has no database backstop.** `SetCurrentVersion` is the only thing checking that
   the current version is published and belongs to this ruleset. A `CHECK` constraint cannot
   contain a subquery — verified, Postgres answers `ERROR: cannot use subquery in check
@@ -212,16 +213,15 @@ to be written:
 
 ## Persisted enum values start at 1
 
-*Corrected 2026-10-05.* This rule previously read "enum values that cross the snapshot boundary",
-which was wrong in a way that misclassified a real case. **The criterion is whether the value is
-persisted at all**, not whether it reaches `PublishedContent` — a stored ordinal has to survive a
-member being reordered for exactly the same reason a serialised one does.
+**The criterion is whether the value is persisted at all**, not whether it reaches
+`PublishedContent`: a stored ordinal has to survive a member being reordered for exactly the
+same reason a serialised one does.
 
 So `TraitCategory`, `AbilityDefinitionKind`, `CostOp`, `CostOperand`, `PrerequisiteEntryKind` and
 `ArchetypeTargetKind` are numbered because they end up inside `PublishedContent`, **and
-`RulesetVersionKind` is numbered because `ReleaseType` is a stored column.** The old wording left
-it unnumbered, which also made `Errata` the zero value — so any path failing to set a release
-type would have read back as a legitimate "Errata" rather than an obvious sentinel.
+`RulesetVersionKind` is numbered because `ReleaseType` is a stored column.** Unnumbered, `Errata`
+would be the zero value, so any path failing to set a release type would read back as a
+legitimate "Errata" rather than an obvious sentinel.
 
 Starting at 1 is deliberate for that reason: `default(T)` is then not a valid member.
 

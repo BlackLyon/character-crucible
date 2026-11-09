@@ -42,4 +42,5 @@ with warnings as errors.
 
 The stand-ins carry only what a probe asks about. They change when the real entity takes a shape
 no probe covers, such as a new jsonb collection or a different value-object shape, not when it
-gains ordinary properties. Owned by Claude; see the work split in `CLAUDE.md`.
+gains ordinary properties. Written and maintained by Claude; see "How this was built" in the root
+README.

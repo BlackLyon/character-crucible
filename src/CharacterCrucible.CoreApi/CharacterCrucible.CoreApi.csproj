@@ -29,8 +29,4 @@
     <ProjectReference Include="..\CharacterCrucible.Contracts\CharacterCrucible.Contracts.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Modules\Characters\Persistence\" />
-  </ItemGroup>
-
 </Project>

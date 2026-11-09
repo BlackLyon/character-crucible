@@ -3,30 +3,6 @@
 A system-agnostic character manager for tabletop RPGs. Players submit advancement requests;
 most are applied automatically, the gated ones go to a narrator. Game rules live in data.
 
-## Read these before doing anything
-
-Local only — `notes/` is gitignored and holds the real decision record:
-
-| File | What it carries |
-|---|---|
-| `notes/architecture-decision.md` | Why the system is shaped this way, the alternatives rejected, the falsifiers |
-| `notes/domain-design.md` | **The domain's reasoning.** What makes a character, the attribute and ability model, resolution, and which design questions are still open |
-| `notes/domain/` | **Entity specifications** — `rulesets.md`, `characters.md`, `advancement.md` (part of `Characters`), plus `flows.md` for every use case on one page. What to actually write. Start at its README for build order and the entity/value-object convention |
-| `notes/plan.md` | Staged scope, ordered by value, and what is deliberately out |
-| `notes/process-rulesets-module.md` | After-action from the first module, and the process changes that follow from it |
-| `notes/<latest date>.md` | Where work stopped and what starts next |
-| `notes/parking-lot.md` | Deferred ideas. New ones go here rather than into the plan |
-| `notes/dev-environment.md` | Machine- and toolchain-level traps that look like code faults. Read it before debugging a build or test failure that makes no sense |
-| `notes/process-self-code-review.md` | Why the self-review exists, **when it is required and when it can be skipped**, how to tell whether it is working, and what it has missed |
-| `notes/review-findings-<date>.md` | What each review found, what was reproduced, and what was deliberately left |
-| `notes/data-policy.md` | Deletion: the delete-request plus worker-reaper model, settled in principle |
-| `notes/stage-1-ef-config.md` | Stage 1's decisions and checkpoints, kept as the worked example for staging later modules |
-
-**Decisions in those files are settled.** If one comes up again, point at the recorded
-reasoning rather than reopening it — each significant decision carries a written falsifier,
-and that is the legitimate path to changing it. New information updates the doc; it does not
-restart the debate.
-
 ## Invariants
 
 - **The Rules service must never read a database.** It is a policy decision point: given a
@@ -52,7 +28,7 @@ restart the debate.
   `GenerateDocumentationFile` is off, so `///` is IDE tooltips only — use it for the purpose
   line on a type or member, plain `//` for an inline note.
 - Scope is a proof of concept. Breadth over depth — a lesson that turns out interesting goes
-  in the parking lot, not into this week's work.
+  in a list of deferred ideas, not into the current work.
 
 ## Commands
 
@@ -60,18 +36,20 @@ restart the debate.
 docker compose up -d --wait     # Postgres 17 on :5432
 dotnet build                    # expect 0 warnings
 dotnet test
-docker compose run --rm tests   # same suite inside Linux; see notes/dev-environment.md
+docker compose run --rm tests   # same suite inside Linux, needing only Docker
 dotnet run --project src/CharacterCrucible.CoreApi
 ```
 
 ## How the work is split
 
 This is a learning project. Claude writes boilerplate — scaffolding, wiring, config, build
-setup. The author writes the parts that carry the lessons: the domain model, the rules
-evaluator, the outbox, token validation and authorization. Claude advises, reviews and
+setup, EF Core configuration and migrations, CI, and documentation. The author writes the parts
+that carry the lessons: the domain model, the rules evaluator, the outbox, token validation and
+authorization. For the domain's tests, Claude writes the builders and one worked example per
+method family, and the author writes the cases. Claude advises, reviews and
 explains those rather than producing them, and says so when a request crosses the line.
 
-**The EF probes in `probes/` are Claude's**, settled 2026-10-11: writing them, updating the
+**The EF probes in `probes/` are Claude's**: writing them, updating the
 stand-ins when the real entities change something a probe covers, and fixing them when they go
 red. The author gets the answer and what it means for the design, not the code. Stand-in
 mutators exist to drive EF and are never a draft of the domain's methods.

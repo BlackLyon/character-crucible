@@ -1,6 +1,7 @@
 # Private working notes — planning docs, daily notes, parking lot.
 # Deliberately not part of the product.
 notes/
+CLAUDE.local.md
 
 # .NET
 bin/
@@ -45,7 +46,6 @@ appsettings.*.local.json
 *.key
 
 # Editors
-.idea/
 *.swp
 .DS_Store
 Thumbs.db

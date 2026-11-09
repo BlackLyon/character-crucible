@@ -59,9 +59,10 @@ Green is not proof. Four kinds of breach are invisible to it, all measured:
 `NetArchTest.Rules` 1.3.2 was published in 2021, so these will not be fixed upstream.
 `TngTech.ArchUnitNET` is the maintained alternative if that ever matters.
 
-**Also still to add:** a rule asserting `CharacterCrucible.Rules` has no dependency on
-`Npgsql`, `Microsoft.EntityFrameworkCore` or `System.Data` — the firmest invariant in
-`CLAUDE.md` is that the Rules service never reads a database, and nothing currently enforces it.
+**The Rules service never reads a database** is enforced separately, by `NoDatabaseTests` in
+`CharacterCrucible.Rules.Tests`. It checks Rules' whole package graph, transitive dependencies
+included, and the framework assemblies its code uses, against a list of data access libraries.
+A library missing from that list, or one loaded by reflection, wouldn't be caught.
 
 ## Layout inside a module
 
@@ -83,12 +84,9 @@ supplies to build or edit a sheet. It's not a value object, because it's never s
 
 Namespaces follow folders — `CharacterCrucible.CoreApi.Modules.Rulesets.Domain.Entities`.
 
-*Corrected 2026-10-05.* This section previously showed a flat `Domain/` and argued **against**
-splitting it by kind, on the grounds that `TraitDefinition`, its `CostRule` and its
-`TraitCategory` would land in three folders. They do, and the split is still the right call: a
-flat `Domain/` reached about twenty files in one folder with the first module alone, and entity
-files are the ones you navigate to by name. The earlier text described a layout the code never
-used, which is a worse failure than either choice.
+Splitting `Domain/` by kind does put `TraitDefinition`, its `CostRule` and its `TraitCategory` in
+three folders. It is still the right call: a flat `Domain/` reached about twenty files with the
+first module alone, and entity files are the ones you navigate to by name.
 
 The *outer* level is the load-bearing one. Grouping by layer keeps "what is this module"
 answerable from the folder names, and it still works when endpoints and EF configurations
@@ -100,8 +98,9 @@ domain model, so they stay inside `Domain/` rather than becoming a sibling of it
 
 **Watch the namespace.** A `.cs` file created outside the IDE can end up with no namespace
 declaration at all, which puts the type in the **global namespace** — visible to every
-module, and invisible to the architecture test, since there is no namespace to assert
-against. It still compiles, which is what makes it easy to miss.
+module, and invisible to the module-boundary rule, since there is no namespace to assert
+against. It still compiles, which is what makes it easy to miss, so `ModuleBoundaryTests` has a
+separate check that no type sits in the global namespace.
 
 ## EF configuration
 
@@ -114,6 +113,7 @@ the model without a migration, so a removal that did change something shows up t
 ## Why folders rather than projects
 
 Namespace boundaries enforced by a test are as strong as assembly boundaries here, and
-considerably cheaper: six projects instead of twelve, one build, one deploy. If a module
+considerably cheaper: one project per deployable rather than one per module, so the modules
+build and ship with the Core API. If a module
 ever genuinely needs to ship separately, it can be extracted then — the boundary is
 already real, it just isn't a `.csproj` yet.

@@ -4,9 +4,6 @@ Characters, and how they change: creation and review, XP, and advancement reques
 to apply. Advancement lives here rather than in a module of its own. See
 [`Modules/README.md`](../README.md) for why.
 
-> The full design record lives in `notes/`, which is **not** in this repository. This file
-> carries the reasoning a reader needs to work on the code without it.
-
 **State:** the domain is written and mapped to Postgres, with mapping tests against a real
 database. The guard tests of these methods come next. Builders and one worked example per method
 family are in `tests/CharacterCrucible.CoreApi.Tests`, under `Builders/` and `Domain/Characters/`.
@@ -81,11 +78,15 @@ whether the request has `Failed`: the cost changed, the ruleset moved, or it's n
 affordable. The player is never charged a price they didn't see. The orchestrator is also what
 catches a duplicate delivery, before the character is touched.
 
-`Character.ApplyAdvancement` repeats those checks as guards that throw, so it can't be misused on
-its own. That includes refusing a request that isn't `Queued` or `Approved`, so a request still
-waiting for a narrator can't be applied. Then it changes the rating or ability, the balance, the
+`Character.ApplyAdvancement` repeats those checks as guards that throw. That includes refusing a
+request that isn't `Queued` or `Approved`, so a request still waiting for a narrator can't be
+applied. Then it changes the rating or ability, the balance, the
 ledger and the audit row together. `SubmitRequest` likewise accepts only a request fresh from a
 factory, either `Queued` or `PendingApproval`.
+
+One thing it doesn't guard: **it leaves the request's status alone.** Marking the request
+`Applied` is a separate call, `MarkApplied`, so a caller that applied a request and didn't mark it
+could apply it again. Keeping the two together is the orchestrator's job.
 
 **A skill rated 0 is a skill not held**, so every trait on a sheet is rated 1 or more, and buying a
 new skill records a change from `0` to `n`.
@@ -132,8 +133,8 @@ diff, are jsonb. Requests, the ledger and the audit trail are child tables of `c
 ## Not built yet
 
 - **The orchestrator**: the application code that loads a character with its in-flight requests
-  (the query exists: `WithInFlightRequests`), calls Rules, and decides between `ApplyAdvancement` and `MarkFailed`. It comes with the
-  endpoints and the worker.
+  (the query exists: `WithInFlightRequests`), calls Rules, and decides between `ApplyAdvancement`
+  with `MarkApplied`, or `MarkFailed`. It comes with the endpoints and the worker.
 - **Moving a character to a new ruleset version.** `RulesetVersionId` is designed to move, but no
   method changes it yet. Until one does, the apply-time ruleset check can't fail. It's parked with
   the question of what happens to a sheet the new version makes illegal.
