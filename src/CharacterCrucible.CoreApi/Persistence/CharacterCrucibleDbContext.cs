@@ -12,8 +12,7 @@ namespace CharacterCrucible.CoreApi.Persistence;
 /// <remarks>
 /// One context rather than one per module because Character.RulesetVersionId points into the
 /// Rulesets module, and separate contexts cannot express a cross-module foreign key — the
-/// apply-time version check assumes that pointer is valid. See notes/stage-1-ef-config.md for the
-/// measurements behind that.
+/// apply-time version check assumes that pointer is valid.
 /// <para>
 /// This type is the one place allowed to depend on every module, so the architecture test's
 /// module-boundary rule has to exempt the persistence layer rather than forbid all outside
