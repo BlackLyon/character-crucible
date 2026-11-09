@@ -14,11 +14,9 @@ public class CharacterConfiguration : IEntityTypeConfiguration<Character>
     {
         builder.ToTable("character", CharactersSchema.Name);
 
-        builder.HasKey(c => c.Id);
-
-        builder.Property(c => c.Name).HasMaxLength(FieldLengths.Name).IsRequired();
-        builder.Property(c => c.ArchetypeKey).HasMaxLength(FieldLengths.Key).IsRequired();
-        builder.Property(c => c.Race).HasMaxLength(FieldLengths.Race).IsRequired();
+        builder.Property(c => c.Name).HasMaxLength(FieldLengths.Name);
+        builder.Property(c => c.ArchetypeKey).HasMaxLength(FieldLengths.Key);
+        builder.Property(c => c.Race).HasMaxLength(FieldLengths.Race);
 
         // Postgres xmin: assigned by the database, so no mutator can forget to bump it.
         builder.Property(c => c.RowVersion).IsRowVersion();

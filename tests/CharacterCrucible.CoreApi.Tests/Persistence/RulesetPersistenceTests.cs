@@ -250,9 +250,9 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             """,
             Guid.CreateVersion7(), ruleset.Id);
 
-        var ex = await Assert.ThrowsAsync<PostgresException>(insertSecondDraft);
-        Assert.Equal("23505", ex.SqlState);     // unique_violation
-        Assert.Contains("one_draft", ex.ConstraintName ?? string.Empty);
+        var violation = await Assert.ThrowsAsync<PostgresException>(insertSecondDraft);
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, violation.SqlState);
+        Assert.Equal("ux_ruleset_version_one_draft_per_ruleset", violation.ConstraintName);
     }
 
     [Fact]
@@ -282,9 +282,9 @@ public class RulesetPersistenceTests(PostgresFixture postgres) : IClassFixture<P
             """,
             Guid.CreateVersion7(), ruleset.Id);
 
-        var ex = await Assert.ThrowsAsync<PostgresException>(insertDuplicate);
-        Assert.Equal("23505", ex.SqlState);
-        Assert.Contains("major_minor", ex.ConstraintName ?? string.Empty);
+        var violation = await Assert.ThrowsAsync<PostgresException>(insertDuplicate);
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, violation.SqlState);
+        Assert.Equal("ix_ruleset_version_ruleset_id_major_minor", violation.ConstraintName);
     }
 
     /// <summary>

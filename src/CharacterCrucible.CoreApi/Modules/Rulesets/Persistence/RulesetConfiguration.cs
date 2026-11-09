@@ -12,11 +12,8 @@ public class RulesetConfiguration : IEntityTypeConfiguration<Ruleset>
     {
         builder.ToTable("ruleset", RulesetsSchema.Name);
 
-        builder.HasKey(r => r.Id);
-
-        builder.Property(r => r.Name).HasMaxLength(FieldLengths.Name).IsRequired();
-        builder.Property(r => r.Description).IsRequired();
-        builder.Property(r => r.Publisher).HasMaxLength(FieldLengths.Publisher).IsRequired();
+        builder.Property(r => r.Name).HasMaxLength(FieldLengths.Name);
+        builder.Property(r => r.Publisher).HasMaxLength(FieldLengths.Publisher);
 
         // Derived from DerivedFrom, so there is no column. EF maps get-only properties by
         // convention and would otherwise try to persist it.

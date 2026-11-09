@@ -16,12 +16,9 @@ var connectionString = builder.Configuration.GetConnectionString("CharacterCruci
         "appsettings.Development.json locally, or the ConnectionStrings__CharacterCrucible " +
         "environment variable when deployed.");
 
-// snake_case rather than EF's PascalCase: Postgres folds unquoted identifiers, so PascalCase
-// means every hand-written query needs quoting. pgAdmin is in the compose file, so raw queries
-// will happen. Migrations are applied explicitly, never on startup.
+// Migrations are applied explicitly, never on startup.
 builder.Services.AddDbContext<CharacterCrucibleDbContext>(options => options
-    .UseNpgsql(connectionString)
-    .UseSnakeCaseNamingConvention());
+    .UseCharacterCrucibleDatabase(connectionString));
 
 // The database check tests for PENDING MIGRATIONS, not just connectivity. CanConnectAsync --
 // what AddDbContextCheck does by default -- returns true against a connected but unmigrated

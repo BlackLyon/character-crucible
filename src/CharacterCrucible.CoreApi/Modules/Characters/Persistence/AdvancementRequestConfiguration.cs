@@ -18,10 +18,8 @@ public class AdvancementRequestConfiguration : IEntityTypeConfiguration<Advancem
     {
         builder.ToTable("advancement_request", CharactersSchema.Name);
 
-        builder.HasKey(r => r.Id);
-
-        builder.Property(r => r.TargetKey).HasMaxLength(FieldLengths.Key).IsRequired();
-        builder.Property(r => r.EvaluatedEngineVersion).HasMaxLength(FieldLengths.EngineVersion).IsRequired();
+        builder.Property(r => r.TargetKey).HasMaxLength(FieldLengths.Key);
+        builder.Property(r => r.EvaluatedEngineVersion).HasMaxLength(FieldLengths.EngineVersion);
         builder.Property(r => r.ResolutionReason).HasMaxLength(FieldLengths.Reason);
 
         builder.Ignore(r => r.IsInFlight);

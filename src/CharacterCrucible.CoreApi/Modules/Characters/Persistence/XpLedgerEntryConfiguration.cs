@@ -12,9 +12,7 @@ public class XpLedgerEntryConfiguration : IEntityTypeConfiguration<XpLedgerEntry
     {
         builder.ToTable("xp_ledger_entry", CharactersSchema.Name);
 
-        builder.HasKey(l => l.Id);
-
-        builder.Property(l => l.Reason).HasMaxLength(FieldLengths.Reason).IsRequired();
+        builder.Property(l => l.Reason).HasMaxLength(FieldLengths.Reason);
 
         // Every history read is one character's rows in order. The FK index alone covers the
         // filter but not the ordering.

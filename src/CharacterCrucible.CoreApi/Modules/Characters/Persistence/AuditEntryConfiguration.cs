@@ -13,8 +13,6 @@ public class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEntry>
     {
         builder.ToTable("audit_entry", CharactersSchema.Name);
 
-        builder.HasKey(a => a.Id);
-
         builder.Property(a => a.Reason).HasMaxLength(FieldLengths.Reason);
         builder.Property(a => a.EngineVersion).HasMaxLength(FieldLengths.EngineVersion);
 

@@ -103,6 +103,14 @@ declaration at all, which puts the type in the **global namespace** — visible 
 module, and invisible to the architecture test, since there is no namespace to assert
 against. It still compiles, which is what makes it easy to miss.
 
+## EF configuration
+
+**State only what convention doesn't.** EF already makes a non-nullable type's column
+`NOT NULL`, whether a value type or a non-nullable reference, and already keys on a property
+named `Id`. So there's no `IsRequired()` on a non-nullable type, no `HasKey` on `Id`, and no bare
+`Property(x => x.Y)` that configures nothing. `SchemaTests` fails if a configuration change alters
+the model without a migration, so a removal that did change something shows up there.
+
 ## Why folders rather than projects
 
 Namespace boundaries enforced by a test are as strong as assembly boundaries here, and
