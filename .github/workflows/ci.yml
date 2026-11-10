@@ -45,6 +45,6 @@ jobs:
 
       # Docker is preinstalled on ubuntu-latest, so Testcontainers needs no setup here. The timeout
       # aborts (exit 3) a run stuck in code that takes the test's token; anything else waits out the
-      # job's 15 minutes. A project that runs zero tests fails (exit 8) unless its csproj opts out.
+      # job's 15 minutes. A project that runs zero tests fails (exit 8).
       - name: Test
         run: dotnet test --no-build --timeout 5m

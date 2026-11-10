@@ -1,15 +1,15 @@
 // PreToolUse gate: refuse `gh pr create` until the self-review has run.
 //
-// Exists because the rule was written down twice and broken twice -- see
-// notes/process-rulesets-module.md. A convention without a mechanism is a reminder.
+// Exists because the rule was written down twice and broken twice. A convention without a
+// mechanism is a reminder.
 //
 // Parses the payload rather than string-matching it. An earlier version matched the raw
 // JSON, which denied any command merely MENTIONING `gh pr create` (grepping these files,
 // or writing docs about them) and -- worse -- let any payload containing CC_REVIEW_DONE
 // through, including this file's own deny text echoed back. The gate could disable itself.
 //
-// Node rather than a shell script: there is no jq on the author's machine, and Claude Code
-// runs on Node, so it is the one interpreter guaranteed present wherever this hook runs.
+// Node rather than a shell script: Claude Code runs on Node, so it is the one interpreter
+// guaranteed present wherever this hook runs. jq may not be.
 
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
@@ -88,7 +88,6 @@ process.stdout.write(JSON.stringify({
       "finding, then re-run with CC_REVIEW_DONE=1 prefixed (Bash tool). Skippable: docs-only " +
       "diffs (auto-allowed), and patch/minor dependency bumps that build clean at -warnaserror " +
       "with the full suite passing. To skip, tell the user which category the change falls in " +
-      "and why, and get their agreement before overriding; never override silently. " +
-      "See notes/process-self-code-review.md.",
+      "and why, and get their agreement before overriding; never override silently.",
   },
 }));

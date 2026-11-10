@@ -41,9 +41,9 @@ services:
         condition: service_healthy
 
 
-  # Runs the test suite inside Linux. Windows Smart App Control blocks freshly built assemblies
-  # on this machine, which presents as a crashed test run rather than a test failure -- so this is
-  # the verification run that cannot be blocked.
+  # Runs the test suite inside Linux. On Windows with Smart App Control on, freshly built test
+  # assemblies can be blocked, which looks like a crashed test run rather than a test failure --
+  # so this is the verification run that cannot be blocked.
   #
   #   docker compose run --rm tests
   #   docker compose run --rm tests dotnet test --artifacts-path /artifacts \
