@@ -6,6 +6,8 @@ namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 /// <summary>Guards on review and play status: approve, send back, ban, remove from and return to play.</summary>
 public class CharacterLifecycleTests
 {
+    public static TheoryData<CharacterStatus> NotPendingApproval => StatusesExcept(CharacterStatus.PendingApproval);
+
     [Fact]
     public void An_active_character_cannot_be_sent_back_and_stays_active()
     {
@@ -14,5 +16,26 @@ public class CharacterLifecycleTests
         Assert.Throws<InvalidOperationException>(() => character.SendBack("Needs a backstory."));
 
         Assert.Equal(CharacterStatus.Active, character.Status);
+    }
+
+    [Fact]
+    public void Only_a_character_in_pending_approval_can_be_approved()
+    {
+        var character = ACharacter().InStatus(CharacterStatus.PendingApproval).Build();
+
+        character.Approve(Narrator, Clock());
+
+        Assert.Equal(CharacterStatus.Active, character.Status);
+    }
+
+    [Theory]
+    [MemberData(nameof(NotPendingApproval))]
+    public void A_character_not_in_pending_approval_cannot_be_approved(CharacterStatus status)
+    {
+        var character = ACharacter().InStatus(status).Build();
+
+        Assert.Throws<InvalidOperationException>(() => character.Approve(Narrator, Clock()));
+
+        Assert.Equal(status, character.Status);
     }
 }
