@@ -54,6 +54,36 @@ internal static class TestCharacters
         return character;
     }
 
+    public static Character DraftBanned()
+    {
+        var character = PendingApproval();
+        character.BanDraft("Doesn't fit the setting");
+        return character;
+    }
+
+    /// <param name="status">Banned, Dead or Retired.</param>
+    public static Character RemovedFromPlay(CharacterStatus status)
+    {
+        var character = Active();
+        character.RemoveFromPlay(Narrator, status, "Left the campaign", Clock());
+        return character;
+    }
+
+    /// <summary>A character in any status. A status added later throws here until it has a path.</summary>
+    public static Character InStatus(CharacterStatus status) => status switch
+    {
+        CharacterStatus.Draft => Draft(),
+        CharacterStatus.PendingApproval => PendingApproval(),
+        CharacterStatus.Active => Active(),
+        CharacterStatus.DraftBanned => DraftBanned(),
+        CharacterStatus.Banned or CharacterStatus.Dead or CharacterStatus.Retired => RemovedFromPlay(status),
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, "No builder path to this status yet."),
+    };
+
+    /// <summary>Every status except <paramref name="allowed"/>, for a theory that each one is refused.</summary>
+    public static TheoryData<CharacterStatus> StatusesExcept(params CharacterStatus[] allowed) =>
+        new(Enum.GetValues<CharacterStatus>().Except(allowed));
+
     /// <summary>A trait request priced under the character's own version, so the apply-time check passes.</summary>
     public static AdvancementRequest TraitRequest(Character character, string key = "strength", int rating = 3,
         int cost = 0, bool requiresApproval = false) =>
