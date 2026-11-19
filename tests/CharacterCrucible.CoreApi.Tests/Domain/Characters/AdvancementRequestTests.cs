@@ -11,7 +11,8 @@ public class AdvancementRequestTests
     [InlineData("   ")]
     public void A_rejection_without_a_reason_is_refused_and_the_request_stays_pending(string reason)
     {
-        var request = TraitRequest(Active(), requiresApproval: true);
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+        var request = ATraitRequest(character).Gated().Build();
 
         Assert.ThrowsAny<ArgumentException>(() => request.Reject(Narrator.Id, reason, Clock()));
 

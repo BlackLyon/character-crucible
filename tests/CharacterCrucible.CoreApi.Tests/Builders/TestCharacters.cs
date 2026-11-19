@@ -7,8 +7,8 @@ using Microsoft.Extensions.Time.Testing;
 namespace CharacterCrucible.CoreApi.Tests.Builders;
 
 /// <summary>
-/// Characters in each starting state, built only through the domain's own methods and factories, so a
-/// builder can't produce a state the domain can't reach. Change the arguments, not the path.
+/// Where test characters and requests start: <see cref="ACharacter"/>, <see cref="ATraitRequest"/> and
+/// <see cref="AnAbilityRequest"/>, plus the values they share.
 /// </summary>
 internal static class TestCharacters
 {
@@ -24,6 +24,15 @@ internal static class TestCharacters
     /// <summary>A fresh clock per call, so a test that advances time can't move another's.</summary>
     public static FakeTimeProvider Clock() => new(Now);
 
+    /// <summary>A Draft character unless told otherwise; <c>.Build()</c> makes it.</summary>
+    public static CharacterBuilder ACharacter() => new();
+
+    /// <summary>A Queued request to raise strength to 3, free, unless told otherwise.</summary>
+    public static AdvancementRequestBuilder ATraitRequest(Character character) => new(character, TargetKind.Trait);
+
+    /// <summary>A Queued request for riposte, free, unless told otherwise.</summary>
+    public static AdvancementRequestBuilder AnAbilityRequest(Character character) => new(character, TargetKind.Ability);
+
     public static CharacterDraft Sheet(
         IReadOnlyList<CharacterTrait>? traits = null,
         IReadOnlyList<CharacterAbility>? abilities = null) =>
@@ -31,67 +40,7 @@ internal static class TestCharacters
             traits ?? [new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)],
             abilities ?? []);
 
-    /// <param name="rulesetVersionId">A real version's id when the character will be saved; the FK needs one.</param>
-    public static Character Draft(Guid? rulesetVersionId = null, CharacterDraft? sheet = null) =>
-        new(Player.Id, rulesetVersionId ?? Guid.CreateVersion7(), sheet ?? Sheet(), Clock());
-
-    public static Character PendingApproval(Guid? rulesetVersionId = null, CharacterDraft? sheet = null)
-    {
-        var character = Draft(rulesetVersionId, sheet);
-        character.SubmitForApproval();
-        return character;
-    }
-
-    /// <summary>Approved by <see cref="Narrator"/>, then granted <paramref name="xp"/> if any.</summary>
-    public static Character Active(int xp = 0, Guid? rulesetVersionId = null, CharacterDraft? sheet = null)
-    {
-        var character = PendingApproval(rulesetVersionId, sheet);
-        character.Approve(Narrator, Clock());
-        if (xp > 0)
-        {
-            character.GrantXp(Narrator, xp, "Session award", Clock());
-        }
-        return character;
-    }
-
-    public static Character DraftBanned()
-    {
-        var character = PendingApproval();
-        character.BanDraft("Doesn't fit the setting");
-        return character;
-    }
-
-    /// <param name="status">Banned, Dead or Retired.</param>
-    public static Character RemovedFromPlay(CharacterStatus status)
-    {
-        var character = Active();
-        character.RemoveFromPlay(Narrator, status, "Left the campaign", Clock());
-        return character;
-    }
-
-    /// <summary>A character in any status. A status added later throws here until it has a path.</summary>
-    public static Character InStatus(CharacterStatus status) => status switch
-    {
-        CharacterStatus.Draft => Draft(),
-        CharacterStatus.PendingApproval => PendingApproval(),
-        CharacterStatus.Active => Active(),
-        CharacterStatus.DraftBanned => DraftBanned(),
-        CharacterStatus.Banned or CharacterStatus.Dead or CharacterStatus.Retired => RemovedFromPlay(status),
-        _ => throw new ArgumentOutOfRangeException(nameof(status), status, "No builder path to this status yet."),
-    };
-
     /// <summary>Every status except <paramref name="allowed"/>, for a theory that each one is refused.</summary>
     public static TheoryData<CharacterStatus> StatusesExcept(params CharacterStatus[] allowed) =>
         new(Enum.GetValues<CharacterStatus>().Except(allowed));
-
-    /// <summary>A trait request priced under the character's own version, so the apply-time check passes.</summary>
-    public static AdvancementRequest TraitRequest(Character character, string key = "strength", int rating = 3,
-        int cost = 0, bool requiresApproval = false) =>
-        AdvancementRequest.ForTrait(Player.Id, Clock(), key, rating, cost, character.RulesetVersionId,
-            EngineVersion, requiresApproval);
-
-    public static AdvancementRequest AbilityRequest(Character character, string key = "riposte",
-        int cost = 0, bool requiresApproval = false) =>
-        AdvancementRequest.ForAbility(Player.Id, Clock(), key, cost, character.RulesetVersionId,
-            EngineVersion, requiresApproval);
 }

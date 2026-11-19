@@ -47,7 +47,8 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task A_draft_round_trips_its_sheet_and_a_null_acquired_date()
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var draft = Draft(versionId, Sheet(abilities: [new CharacterAbility("riposte", null)]));
+        var draft = ACharacter().OnVersion(versionId)
+            .WithSheet(Sheet(abilities: [new CharacterAbility("riposte", null)])).Build();
         var id = await SaveAsync(draft);
 
         await using var db = postgres.NewContext();
@@ -70,8 +71,8 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task Approval_round_trips_the_acquired_date_and_the_audit_diff()
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var approved = Active(rulesetVersionId: versionId,
-            sheet: Sheet(abilities: [new CharacterAbility("riposte", null)]));
+        var approved = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId)
+            .WithSheet(Sheet(abilities: [new CharacterAbility("riposte", null)])).Build();
         var id = await SaveAsync(approved);
 
         await using var db = postgres.NewContext();
@@ -109,7 +110,8 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task A_stale_character_cannot_overwrite_a_newer_save()
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var id = await SaveAsync(Active(rulesetVersionId: versionId));
+        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).Build();
+        var id = await SaveAsync(character);
 
         await using var first = postgres.NewContext();
         await using var second = postgres.NewContext();
@@ -124,26 +126,6 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync(Ct));
     }
 
-    /// <summary>Each status, reached through the request's own transitions.</summary>
-    private static AdvancementRequest RequestIn(RequestStatus status, Character character)
-    {
-        var request = TraitRequest(character, requiresApproval: status is
-            RequestStatus.PendingApproval or RequestStatus.Approved or RequestStatus.Rejected);
-        character.SubmitRequest(request);
-
-        switch (status)
-        {
-            case RequestStatus.Approved: request.Approve(Narrator.Id, Clock()); break;
-            case RequestStatus.Rejected: request.Reject(Narrator.Id, "Not this session.", Clock()); break;
-            case RequestStatus.Applied: request.MarkApplied(Clock()); break;
-            case RequestStatus.Failed: request.MarkFailed("The cost changed.", Clock()); break;
-            case RequestStatus.Abandoned: request.MarkAbandoned("Dead-lettered.", Clock()); break;
-        }
-
-        Assert.Equal(status, request.RequestStatus);
-        return request;
-    }
-
     // Every member, so a status added later is covered without anyone remembering to.
     public static TheoryData<RequestStatus> EveryStatus => new(Enum.GetValues<RequestStatus>());
 
@@ -152,8 +134,9 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task In_flight_means_the_same_to_IsInFlight_the_include_and_the_index(RequestStatus status)
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var character = Active(rulesetVersionId: versionId);
-        var inFlight = RequestIn(status, character).IsInFlight;
+        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).Build();
+        var first = ATraitRequest(character).InStatus(status).Submitted().Build();
+        var inFlight = first.IsInFlight;
         var id = await SaveAsync(character);
 
         // The include.
@@ -169,7 +152,8 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
         await using (var db = postgres.NewContext())
         {
             var blind = await db.Characters.SingleAsync(c => c.Id == id, Ct);
-            blind.SubmitRequest(TraitRequest(blind));
+            var second = ATraitRequest(blind).Build();
+            blind.SubmitRequest(second);
 
             if (inFlight)
             {
@@ -189,9 +173,11 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task A_trait_and_an_ability_with_the_same_key_can_be_in_flight_together()
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var character = Active(rulesetVersionId: versionId);
-        character.SubmitRequest(TraitRequest(character, "riposte"));
-        character.SubmitRequest(AbilityRequest(character, "riposte"));
+        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).Build();
+        var trait = ATraitRequest(character).WithKey("riposte").Build();
+        var ability = AnAbilityRequest(character).WithKey("riposte").Build();
+        character.SubmitRequest(trait);
+        character.SubmitRequest(ability);
 
         var id = await SaveAsync(character);
 
@@ -203,8 +189,8 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     private async Task<(Guid CharacterId, Guid RequestId)> SaveAppliedAsync()
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var character = Active(xp: 10, rulesetVersionId: versionId);
-        var request = TraitRequest(character, cost: 4);
+        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).WithXp(10).Build();
+        var request = ATraitRequest(character).WithCost(4).Build();
         character.SubmitRequest(request);
         var id = await SaveAsync(character);
         Assert.NotEqual(Guid.Empty, request.Id);
@@ -237,8 +223,8 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
         // The copy happens before EF assigns the request an id, so the rows carry Guid.Empty. The
         // FK is what turns that into an error instead of a stored row.
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var character = Active(xp: 10, rulesetVersionId: versionId);
-        var request = TraitRequest(character, cost: 4);
+        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).WithXp(10).Build();
+        var request = ATraitRequest(character).WithCost(4).Build();
         character.SubmitRequest(request);
         character.ApplyAdvancement(Worker, request, EngineVersion, Clock());
 
@@ -290,7 +276,9 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task A_character_on_a_ruleset_version_that_does_not_exist_is_rejected()
     {
         await using var db = postgres.NewContext();
-        db.Characters.Add(Draft(rulesetVersionId: Guid.CreateVersion7()));
+        var unknownVersion = Guid.CreateVersion7();
+        var character = ACharacter().OnVersion(unknownVersion).Build();
+        db.Characters.Add(character);
 
         var exception = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(Ct));
         AssertForeignKey("fk_character_ruleset_version_ruleset_version_id",
@@ -306,8 +294,9 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
         // Published versions are never deleted; drafts can be. Without these FKs, deleting one
         // would leave history pointing at nothing.
         var publishedId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var character = Active(rulesetVersionId: publishedId);
-        character.SubmitRequest(TraitRequest(character));
+        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(publishedId).Build();
+        var request = ATraitRequest(character).Build();
+        character.SubmitRequest(request);
         var id = await SaveAsync(character);
         var draftId = await PublishedVersions.SaveDraftAsync(postgres, Ct);
 
@@ -336,8 +325,9 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task Each_kind_of_history_blocks_deleting_its_character(string constraint)
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var character = Active(xp: 5, rulesetVersionId: versionId);
-        character.SubmitRequest(TraitRequest(character));
+        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).WithXp(5).Build();
+        var request = ATraitRequest(character).Build();
+        character.SubmitRequest(request);
         var id = await SaveAsync(character);
 
         // Remove the other two kinds, so only the one under test can block the delete.

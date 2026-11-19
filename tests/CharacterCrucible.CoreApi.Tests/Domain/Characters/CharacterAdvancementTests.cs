@@ -1,4 +1,5 @@
-﻿using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
+﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 
@@ -8,9 +9,10 @@ public class CharacterAdvancementTests
     [Fact]
     public void A_character_awaiting_review_cannot_submit_a_request()
     {
-        var character = PendingApproval();
+        var character = ACharacter().InStatus(CharacterStatus.PendingApproval).Build();
+        var request = ATraitRequest(character).Build();
 
-        Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(TraitRequest(character)));
+        Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(request));
 
         // Null, not merely unchanged: it has never been set, so any write would show.
         Assert.Null(character.LastRequestSubmittedAt);

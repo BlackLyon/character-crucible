@@ -3,16 +3,58 @@ using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Builders;
 
-/// <summary>The builders themselves, so a status theory can't run against the wrong character.</summary>
+/// <summary>The builders themselves, so a theory can't run against a character or request it didn't ask for.</summary>
 public class TestCharactersTests
 {
     public static TheoryData<CharacterStatus> EveryStatus => StatusesExcept();
+    public static TheoryData<RequestStatus> EveryRequestStatus => new(Enum.GetValues<RequestStatus>());
 
     [Theory]
     [MemberData(nameof(EveryStatus))]
-    public void Every_status_has_a_builder_that_reaches_it(CharacterStatus status)
+    public void Every_character_status_has_a_builder_path(CharacterStatus status)
     {
-        Assert.Equal(status, InStatus(status).Status);
+        Assert.Equal(status, ACharacter().InStatus(status).Build().Status);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryRequestStatus))]
+    public void Every_request_status_has_a_builder_path(RequestStatus status)
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+
+        Assert.Equal(status, ATraitRequest(character).InStatus(status).Submitted().Build().RequestStatus);
+    }
+
+    [Fact]
+    public void A_gated_applied_request_passes_through_approval()
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+
+        var request = ATraitRequest(character).Gated().InStatus(RequestStatus.Applied).Build();
+
+        Assert.Equal(RequestStatus.Applied, request.RequestStatus);
+        Assert.Equal(Narrator.Id, request.ReviewedBy);
+    }
+
+    [Fact]
+    public void A_shared_builder_is_not_changed_by_a_test_that_extends_it()
+    {
+        var active = ACharacter().InStatus(CharacterStatus.Active);
+
+        _ = active.WithXp(10).Build();
+
+        Assert.Equal(0, active.Build().UnspentXp);
+    }
+
+    [Fact]
+    public void Options_that_do_not_fit_are_refused_at_build()
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+
+        Assert.Throws<InvalidOperationException>(() => ACharacter().WithXp(10).Build());
+        Assert.Throws<InvalidOperationException>(() => AnAbilityRequest(character).WithRating(2).Build());
+        Assert.Throws<InvalidOperationException>(() =>
+            ATraitRequest(character).Gated().InStatus(RequestStatus.Queued).Build());
     }
 
     [Fact]

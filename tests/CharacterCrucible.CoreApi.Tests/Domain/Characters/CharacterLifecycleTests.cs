@@ -9,7 +9,7 @@ public class CharacterLifecycleTests
     [Fact]
     public void An_active_character_cannot_be_sent_back_and_stays_active()
     {
-        var character = Active();
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
 
         Assert.Throws<InvalidOperationException>(() => character.SendBack("Needs a backstory."));
 
