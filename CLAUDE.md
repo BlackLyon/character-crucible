@@ -46,8 +46,10 @@ This is a learning project. Claude writes boilerplate — scaffolding, wiring, c
 setup, EF Core configuration and migrations, CI, and documentation. The author writes the parts
 that carry the lessons: the domain model, the rules evaluator, the outbox, token validation and
 authorization. For the domain's tests, Claude writes the builders and one worked example per
-method family, and the author writes the cases. Claude advises, reviews and
-explains those rather than producing them, and says so when a request crosses the line.
+method family. The author writes the cases that carry the design: boundaries, sheet contents,
+what *unchanged* means, ledger and audit rows. Once the author knows the pattern, Claude writes
+the routine guard cases (build, act, assert it throws). Otherwise Claude advises, reviews and
+explains rather than producing, and says so when a request crosses the line.
 
 **The EF probes in `probes/` are Claude's**: writing them, updating the
 stand-ins when the real entities change something a probe covers, and fixing them when they go
