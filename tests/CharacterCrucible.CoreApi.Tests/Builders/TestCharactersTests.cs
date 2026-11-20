@@ -6,7 +6,7 @@ namespace CharacterCrucible.CoreApi.Tests.Builders;
 /// <summary>The builders themselves, so a theory can't run against a character or request it didn't ask for.</summary>
 public class TestCharactersTests
 {
-    public static TheoryData<CharacterStatus> EveryStatus => StatusesExcept();
+    public static TheoryData<CharacterStatus> EveryStatus => StatusesExcept<CharacterStatus>();
     public static TheoryData<RequestStatus> EveryRequestStatus => new(Enum.GetValues<RequestStatus>());
 
     [Theory]

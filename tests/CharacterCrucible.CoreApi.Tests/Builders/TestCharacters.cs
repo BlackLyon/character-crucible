@@ -40,7 +40,7 @@ internal static class TestCharacters
             traits ?? [new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)],
             abilities ?? []);
 
-    /// <summary>Every status except <paramref name="allowed"/>, for a theory that each one is refused.</summary>
-    public static TheoryData<CharacterStatus> StatusesExcept(params CharacterStatus[] allowed) =>
-        new(Enum.GetValues<CharacterStatus>().Except(allowed));
+    /// <summary>Every status except <paramref name="allowed"/>, for a theory that each one is refused. Character or request statuses.</summary>
+    public static TheoryData<TStatus> StatusesExcept<TStatus>(params TStatus[] allowed) where TStatus : struct, Enum =>
+        new(Enum.GetValues<TStatus>().Except(allowed));
 }

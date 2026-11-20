@@ -8,6 +8,8 @@ namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 public class CharacterLifecycleTests
 {
     public static TheoryData<CharacterStatus> NotPendingApproval => StatusesExcept(CharacterStatus.PendingApproval);
+    public static TheoryData<CharacterStatus> NotARemovalTarget =>
+        StatusesExcept(CharacterStatus.Banned, CharacterStatus.Dead, CharacterStatus.Retired);
 
     [Fact]
     public void An_active_character_cannot_be_sent_back_and_stays_active()
@@ -70,5 +72,17 @@ public class CharacterLifecycleTests
         Assert.Throws<InvalidOperationException>(() => character.ReturnToPlay(Narrator, "Appeal accepted.", Clock()));
 
         Assert.Equal(CharacterStatus.DraftBanned, character.Status);
+    }
+
+    [Theory]
+    [MemberData(nameof(NotARemovalTarget))]
+    public void RemoveFromPlay_refuses_a_target_other_than_Banned_Dead_or_Retired(CharacterStatus target)
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+
+        var refused = Assert.Throws<ArgumentOutOfRangeException>(() => character.RemoveFromPlay(Narrator, target, "Left the campaign.", Clock()));
+
+        Assert.Equal("status", refused.ParamName);
+        Assert.Equal(CharacterStatus.Active, character.Status);
     }
 }
