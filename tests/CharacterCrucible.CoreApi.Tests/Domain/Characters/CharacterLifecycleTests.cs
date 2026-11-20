@@ -51,4 +51,24 @@ public class CharacterLifecycleTests
 
         Assert.All(character.Abilities, ability => Assert.Equal(Now, ability.AcquiredDate));
     }
+
+    [Fact]
+    public void BanDraft_lands_in_DraftBanned()
+    {
+        var character = ACharacter().InStatus(CharacterStatus.PendingApproval).Build();
+
+        character.BanDraft("Inappropriate content.");
+
+        Assert.Equal(CharacterStatus.DraftBanned, character.Status);
+    }
+
+    [Fact]
+    public void ReturnToPlay_refuses_a_DraftBanned_character()
+    {
+        var character = ACharacter().InStatus(CharacterStatus.DraftBanned).Build();
+
+        Assert.Throws<InvalidOperationException>(() => character.ReturnToPlay(Narrator, "Appeal accepted.", Clock()));
+
+        Assert.Equal(CharacterStatus.DraftBanned, character.Status);
+    }
 }
