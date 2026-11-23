@@ -114,4 +114,19 @@ public class CharacterAdvancementTests
 
         Assert.Null(character.LastRequestSubmittedAt);
     }
+
+    [Theory]
+    [InlineData(5, 3)]
+    [InlineData(3, 3)]
+    [InlineData(0, 0)]
+    public void ApplyAdvancement_accepts_a_request_the_character_can_afford(int unspentXp, int requestCost)
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).WithXp(unspentXp).Build();
+        var request = ATraitRequest(character).WithCost(requestCost).Submitted().Build();
+        var expectedUnspentXp = unspentXp - requestCost;
+
+        character.ApplyAdvancement(Worker, request, EngineVersion, Clock());
+
+        Assert.Equal(expectedUnspentXp, character.UnspentXp);
+    }
 }
