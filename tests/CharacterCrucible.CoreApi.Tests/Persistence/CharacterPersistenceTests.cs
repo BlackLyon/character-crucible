@@ -47,8 +47,8 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task A_draft_round_trips_its_sheet_and_a_null_acquired_date()
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var draft = ACharacter().OnVersion(versionId)
-            .WithSheet(Sheet(abilities: [new CharacterAbility("riposte", null)])).Build();
+        var sheet = ADraft().WithAbilities("riposte").Build();
+        var draft = ACharacter().OnVersion(versionId).WithSheet(sheet).Build();
         var id = await SaveAsync(draft);
 
         await using var db = postgres.NewContext();
@@ -71,8 +71,8 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     public async Task Approval_round_trips_the_acquired_date_and_the_audit_diff()
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var approved = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId)
-            .WithSheet(Sheet(abilities: [new CharacterAbility("riposte", null)])).Build();
+        var sheet = ADraft().WithAbilities("riposte").Build();
+        var approved = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).WithSheet(sheet).Build();
         var id = await SaveAsync(approved);
 
         await using var db = postgres.NewContext();

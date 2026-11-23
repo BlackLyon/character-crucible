@@ -1,4 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Builders;
@@ -47,6 +48,14 @@ public class TestCharactersTests
         Assert.Equal(later, request.SubmittedDate);
         Assert.Equal(later, request.ReviewedDate);
         Assert.Equal(later, character.LastRequestSubmittedAt);
+    }
+
+    [Fact]
+    public void Abilities_named_by_key_are_undated_and_kept_in_order()
+    {
+        var draft = ADraft().WithAbilities("riposte", "parry").Build();
+
+        Assert.Equal([new CharacterAbility("riposte", null), new CharacterAbility("parry", null)], draft.Abilities);
     }
 
     [Fact]

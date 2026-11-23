@@ -1,5 +1,4 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
-using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
@@ -45,7 +44,7 @@ public class CharacterLifecycleTests
     [Fact]
     public void Approval_dates_every_ability_with_the_approval_time()
     {
-        var draft = Sheet(abilities: [new CharacterAbility("riposte", null), new CharacterAbility("parry", null)]);
+        var draft = ADraft().WithAbilities("riposte", "parry").Build();
 
         var character = ACharacter().InStatus(CharacterStatus.PendingApproval).WithSheet(draft).Build();
 

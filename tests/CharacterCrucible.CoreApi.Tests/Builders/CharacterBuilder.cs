@@ -36,7 +36,7 @@ internal sealed record CharacterBuilder
         }
 
         var character = new Character(Player.Id, RulesetVersionId ?? Guid.CreateVersion7(),
-            Sheet ?? TestCharacters.Sheet(), Clock());
+            Sheet ?? ADraft().Build(), Clock());
 
         switch (Status)
         {

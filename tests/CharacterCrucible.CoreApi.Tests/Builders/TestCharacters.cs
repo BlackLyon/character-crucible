@@ -1,14 +1,13 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
-using CharacterCrucible.CoreApi.Modules.Characters.Domain.Inputs;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
 using Microsoft.Extensions.Time.Testing;
 
 namespace CharacterCrucible.CoreApi.Tests.Builders;
 
 /// <summary>
-/// Where test characters and requests start: <see cref="ACharacter"/>, <see cref="ATraitRequest"/> and
-/// <see cref="AnAbilityRequest"/>, plus the values they share.
+/// Where test characters, drafts and requests start: <see cref="ACharacter"/>, <see cref="ADraft"/>,
+/// <see cref="ATraitRequest"/> and <see cref="AnAbilityRequest"/>, plus the values they share.
 /// </summary>
 internal static class TestCharacters
 {
@@ -33,12 +32,8 @@ internal static class TestCharacters
     /// <summary>A Queued request for riposte, free, unless told otherwise.</summary>
     public static AdvancementRequestBuilder AnAbilityRequest(Character character) => new(character, TargetKind.Ability);
 
-    public static CharacterDraft Sheet(
-        IReadOnlyList<CharacterTrait>? traits = null,
-        IReadOnlyList<CharacterAbility>? abilities = null) =>
-        new("Ilsa Varn", CharacterSex.Female, "Human", 31, "warrior",
-            traits ?? [new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)],
-            abilities ?? []);
+    /// <summary>Strength 2, swordsmanship 1 and no abilities unless told otherwise; <c>.Build()</c> makes it.</summary>
+    public static DraftBuilder ADraft() => new();
 
     /// <summary>Every status except <paramref name="allowed"/>, for a theory that each one is refused. Character or request statuses.</summary>
     public static TheoryData<TStatus> StatusesExcept<TStatus>(params TStatus[] allowed) where TStatus : struct, Enum =>

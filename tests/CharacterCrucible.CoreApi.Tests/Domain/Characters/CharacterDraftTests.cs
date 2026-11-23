@@ -10,10 +10,8 @@ public class CharacterDraftTests
     [Fact]
     public void Updating_a_draft_replaces_the_whole_sheet()
     {
-        var original = Sheet(
-            traits: [new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)],
-            abilities: [new CharacterAbility("riposte", null)]);
-        var replacement = Sheet(traits: [new CharacterTrait("wits", 3)], abilities: []);
+        var original = ADraft().WithAbilities("riposte").Build();
+        var replacement = ADraft().WithTraits(new CharacterTrait("wits", 3)).Build();
         var character = ACharacter().WithSheet(original).Build();
 
         character.UpdateDraft(replacement);
@@ -28,7 +26,7 @@ public class CharacterDraftTests
     {
         var versionId = Guid.CreateVersion7();
 
-        var refused = Assert.Throws<ArgumentOutOfRangeException>(() => new Character(Guid.Empty, versionId, Sheet(), Clock()));
+        var refused = Assert.Throws<ArgumentOutOfRangeException>(() => new Character(Guid.Empty, versionId, ADraft().Build(), Clock()));
 
         Assert.Equal("ownerId", refused.ParamName);
     }
@@ -38,8 +36,8 @@ public class CharacterDraftTests
     [InlineData(-1)]
     public void Updating_a_draft_refuses_a_trait_rated_zero_or_below_and_keeps_the_sheet(int rating)
     {
-        var original = Sheet();
-        var invalid = Sheet(traits: [new CharacterTrait("strength", rating)]);
+        var original = ADraft().Build();
+        var invalid = ADraft().WithTraits(new CharacterTrait("strength", rating)).Build();
         var character = ACharacter().WithSheet(original).Build();
 
         var refused = Assert.Throws<ArgumentOutOfRangeException>(() => character.UpdateDraft(invalid));
@@ -52,8 +50,8 @@ public class CharacterDraftTests
     public void Updating_a_draft_refuses_an_ability_that_already_has_an_acquired_date()
     {
         // Approval sets the date. A draft that brought its own could backdate an ability.
-        var original = Sheet(abilities: [new CharacterAbility("parry", null)]);
-        var dated = Sheet(abilities: [new CharacterAbility("riposte", Now)]);
+        var original = ADraft().WithAbilities("parry").Build();
+        var dated = ADraft().WithDatedAbility("riposte", Now).Build();
         var character = ACharacter().WithSheet(original).Build();
 
         var refused = Assert.Throws<ArgumentException>(() => character.UpdateDraft(dated));
@@ -65,8 +63,8 @@ public class CharacterDraftTests
     [Fact]
     public void Updating_a_draft_refuses_the_same_ability_twice()
     {
-        var original = Sheet(abilities: [new CharacterAbility("parry", null)]);
-        var duplicated = Sheet(abilities: [new CharacterAbility("riposte", null), new CharacterAbility("riposte", null)]);
+        var original = ADraft().WithAbilities("parry").Build();
+        var duplicated = ADraft().WithAbilities("riposte", "riposte").Build();
         var character = ACharacter().WithSheet(original).Build();
 
         var refused = Assert.Throws<ArgumentException>(() => character.UpdateDraft(duplicated));
