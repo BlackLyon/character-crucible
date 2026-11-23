@@ -1,4 +1,5 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
@@ -8,6 +9,8 @@ public class CharacterAdvancementTests
 {
     public static TheoryData<RequestStatus> NotSubmittable =>
         StatusesExcept(RequestStatus.Queued, RequestStatus.PendingApproval);
+    public static TheoryData<RequestStatus> NotAppliable =>
+        StatusesExcept(RequestStatus.Queued, RequestStatus.Approved);
 
     [Fact]
     public void A_character_awaiting_review_cannot_submit_a_request()
@@ -210,5 +213,41 @@ public class CharacterAdvancementTests
         character.ApplyAdvancement(Worker, request, EngineVersion, Clock());
 
         Assert.Equal(expectedUnspentXp, character.UnspentXp);
+    }
+
+    [Theory]
+    [InlineData(RequestStatus.Queued)]
+    [InlineData(RequestStatus.Approved)]
+    public void ApplyAdvancement_applies_a_queued_or_approved_request(RequestStatus status)
+    {
+        var expectedStrength = new CharacterTrait("strength", 3);
+        var sheet = ADraft().WithTraits(new CharacterTrait("strength", 2)).Build();
+        var character = ACharacter().WithSheet(sheet).InStatus(CharacterStatus.Active).WithXp(5).Build();
+        var request = ATraitRequest(character).WithKey("strength").WithRating(3).WithCost(3).InStatus(status).Submitted().Build();
+
+        character.ApplyAdvancement(Worker, request, EngineVersion, Clock());
+
+        Assert.Equal(2, character.UnspentXp);
+        Assert.Equal(expectedStrength, character.Traits.Single(t => t.TraitKey == "strength"));
+    }
+
+    [Theory]
+    [MemberData(nameof(NotAppliable))]
+    public void ApplyAdvancement_refuses_a_request_not_in_queued_or_approved_status(RequestStatus status)
+    {
+        var sheet = ADraft().WithTraits(new CharacterTrait("strength", 2)).WithAbilities("fireball").Build();
+        var character = ACharacter().WithSheet(sheet).InStatus(CharacterStatus.Active).WithXp(5).Build();
+        var request = ATraitRequest(character).WithKey("strength").WithRating(3).WithCost(3).InStatus(status).Submitted().Build();
+        var traitsBefore = character.Traits.ToList();
+        var abilitiesBefore = character.Abilities.ToList();
+        var unspentXpBefore = character.UnspentXp;
+        var totalXpBefore = character.TotalEarnedXp;
+
+        Assert.Throws<InvalidOperationException>(() => character.ApplyAdvancement(Worker, request, EngineVersion, Clock()));
+
+        Assert.Equal(traitsBefore, character.Traits.ToList());
+        Assert.Equal(abilitiesBefore, character.Abilities.ToList());
+        Assert.Equal(unspentXpBefore, character.UnspentXp);
+        Assert.Equal(totalXpBefore, character.TotalEarnedXp);
     }
 }
