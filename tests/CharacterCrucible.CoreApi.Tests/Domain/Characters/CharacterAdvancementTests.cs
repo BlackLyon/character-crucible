@@ -88,4 +88,30 @@ public class CharacterAdvancementTests
 
         Assert.Equal(before, character.Traits);
     }
+
+    [Theory]
+    [InlineData(5, 3)]
+    [InlineData(3, 3)]
+    [InlineData(0, 0)]
+    public void SubmitRequest_accepts_a_request_the_character_can_afford(int unspentXp, int requestCost)
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).WithXp(unspentXp).Build();
+        var request = ATraitRequest(character).WithCost(requestCost).Build();
+
+        character.SubmitRequest(request);
+
+        Assert.Equal(Now, character.LastRequestSubmittedAt);
+    }
+
+    [Theory]
+    [InlineData(2, 3)]
+    public void SubmitRequest_refuses_a_request_the_character_cannot_afford(int unspentXp, int requestCost)
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).WithXp(unspentXp).Build();
+        var request = ATraitRequest(character).WithCost(requestCost).Build();
+
+        Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(request));
+
+        Assert.Null(character.LastRequestSubmittedAt);
+    }
 }
