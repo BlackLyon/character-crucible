@@ -1,5 +1,6 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+using Microsoft.Extensions.Time.Testing;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Builders;
@@ -26,6 +27,7 @@ internal sealed record AdvancementRequestBuilder
     private Guid? RulesetVersionId { get; init; }
     private RequestStatus? Status { get; init; }
     private bool IsSubmitted { get; init; }
+    private DateTimeOffset? SubmittedDate { get; init; }
 
     public AdvancementRequestBuilder WithKey(string key) => this with { Key = key };
 
@@ -46,6 +48,12 @@ internal sealed record AdvancementRequestBuilder
     /// <summary>Submitted to its character before any later transition, which is the only order the domain allows.</summary>
     public AdvancementRequestBuilder Submitted() => this with { IsSubmitted = true };
 
+    /// <summary>
+    /// Made at another time than <see cref="TestCharacters.Now"/>, so a test can tell this request's
+    /// submission from one made before it. Sets the date only; <see cref="Submitted"/> still submits.
+    /// </summary>
+    public AdvancementRequestBuilder WithSubmittedDate(DateTimeOffset submittedDate) => this with { SubmittedDate = submittedDate };
+
     public AdvancementRequest Build()
     {
         var requiresApproval = IsGated
@@ -60,9 +68,10 @@ internal sealed record AdvancementRequestBuilder
         }
 
         var versionId = RulesetVersionId ?? Character.RulesetVersionId;
+        var clock = SubmittedDate is { } at ? new FakeTimeProvider(at) : Clock();
         var request = Kind == TargetKind.Trait
-            ? AdvancementRequest.ForTrait(Player.Id, Clock(), Key, Rating ?? 3, Cost, versionId, EngineVersion, requiresApproval)
-            : AdvancementRequest.ForAbility(Player.Id, Clock(), Key, Cost, versionId, EngineVersion, requiresApproval);
+            ? AdvancementRequest.ForTrait(Player.Id, clock, Key, Rating ?? 3, Cost, versionId, EngineVersion, requiresApproval)
+            : AdvancementRequest.ForAbility(Player.Id, clock, Key, Cost, versionId, EngineVersion, requiresApproval);
 
         if (IsSubmitted)
         {
@@ -72,7 +81,7 @@ internal sealed record AdvancementRequestBuilder
         // A gated request reaches Approved, Applied, Failed or Abandoned only through approval.
         if (requiresApproval && Status is not (null or RequestStatus.PendingApproval or RequestStatus.Rejected))
         {
-            request.Approve(Narrator.Id, Clock());
+            request.Approve(Narrator.Id, clock);
         }
 
         switch (Status)
@@ -80,16 +89,16 @@ internal sealed record AdvancementRequestBuilder
             case null or RequestStatus.Queued or RequestStatus.PendingApproval or RequestStatus.Approved:
                 break;
             case RequestStatus.Rejected:
-                request.Reject(Narrator.Id, "Not this session.", Clock());
+                request.Reject(Narrator.Id, "Not this session.", clock);
                 break;
             case RequestStatus.Applied:
-                request.MarkApplied(Clock());
+                request.MarkApplied(clock);
                 break;
             case RequestStatus.Failed:
-                request.MarkFailed("The cost changed.", Clock());
+                request.MarkFailed("The cost changed.", clock);
                 break;
             case RequestStatus.Abandoned:
-                request.MarkAbandoned("Dead-lettered.", Clock());
+                request.MarkAbandoned("Dead-lettered.", clock);
                 break;
             default:
                 throw new InvalidOperationException($"No builder path to {Status} yet.");

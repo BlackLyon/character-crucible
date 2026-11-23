@@ -37,6 +37,19 @@ public class TestCharactersTests
     }
 
     [Fact]
+    public void A_later_submitted_date_reaches_the_request_and_the_character()
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+        var later = Now.AddHours(1);
+
+        var request = ATraitRequest(character).WithSubmittedDate(later).Gated().InStatus(RequestStatus.Approved).Submitted().Build();
+
+        Assert.Equal(later, request.SubmittedDate);
+        Assert.Equal(later, request.ReviewedDate);
+        Assert.Equal(later, character.LastRequestSubmittedAt);
+    }
+
+    [Fact]
     public void A_shared_builder_is_not_changed_by_a_test_that_extends_it()
     {
         var active = ACharacter().InStatus(CharacterStatus.Active);
