@@ -29,8 +29,8 @@ public class RulesetConfiguration : IEntityTypeConfiguration<Ruleset>
         // because Cascade here and Restrict below form an ordering cycle EF resolves against
         // whatever graph it happens to have loaded. Restrict removes the cycle and the choice.
         //
-        // A ruleset holding only a draft is still deletable: delete the draft through
-        // AbandonDraft, then the ruleset.
+        // A ruleset holding only a draft is still deletable: delete the draft, then the ruleset.
+        // No domain method does that yet.
         builder.HasMany(r => r.Versions)
                .WithOne()
                .HasForeignKey(v => v.RulesetId)
