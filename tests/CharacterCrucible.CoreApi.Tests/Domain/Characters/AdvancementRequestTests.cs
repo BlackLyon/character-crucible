@@ -1,5 +1,6 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+using Microsoft.Extensions.Time.Testing;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
@@ -7,6 +8,113 @@ namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 /// <summary>Guards on a request: how it is built, and its own transitions (approve, reject, applied, failed, abandoned).</summary>
 public class AdvancementRequestTests
 {
+    public static TheoryData<RequestStatus> NotPendingApproval => StatusesExcept(RequestStatus.PendingApproval);
+    public static TheoryData<RequestStatus> NotQueuedOrApproved => StatusesExcept(RequestStatus.Queued, RequestStatus.Approved);
+    public static TheoryData<RequestStatus> Finished =>
+        StatusesExcept(RequestStatus.Queued, RequestStatus.PendingApproval, RequestStatus.Approved);
+
+    // A day after the builder's clock, so a transition that wrongly went through would leave a new date.
+    private static FakeTimeProvider Later() => new(Now.AddDays(1));
+
+    private static AdvancementRequest ARequestIn(RequestStatus status)
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+        return ATraitRequest(character).InStatus(status).Build();
+    }
+
+    [Theory]
+    [MemberData(nameof(NotPendingApproval))]
+    public void Approve_refuses_a_request_not_pending_approval(RequestStatus status)
+    {
+        var request = ARequestIn(status);
+        var reviewedBy = request.ReviewedBy;
+
+        Assert.Throws<InvalidOperationException>(() => request.Approve(Player.Id, Later()));
+
+        Assert.Equal(status, request.RequestStatus);
+        Assert.Equal(reviewedBy, request.ReviewedBy);
+    }
+
+    [Theory]
+    [MemberData(nameof(NotPendingApproval))]
+    public void Reject_refuses_a_request_not_pending_approval(RequestStatus status)
+    {
+        var request = ARequestIn(status);
+        var reviewedBy = request.ReviewedBy;
+
+        Assert.Throws<InvalidOperationException>(() => request.Reject(Player.Id, "Too late.", Later()));
+
+        Assert.Equal(status, request.RequestStatus);
+        Assert.Equal(reviewedBy, request.ReviewedBy);
+    }
+
+    [Theory]
+    [MemberData(nameof(NotQueuedOrApproved))]
+    public void MarkApplied_refuses_a_request_not_queued_or_approved(RequestStatus status)
+    {
+        var request = ARequestIn(status);
+        var resolvedDate = request.ResolvedDate;
+
+        Assert.Throws<InvalidOperationException>(() => request.MarkApplied(Later()));
+
+        Assert.Equal(status, request.RequestStatus);
+        Assert.Equal(resolvedDate, request.ResolvedDate);
+    }
+
+    [Theory]
+    [MemberData(nameof(NotQueuedOrApproved))]
+    public void MarkFailed_refuses_a_request_not_queued_or_approved(RequestStatus status)
+    {
+        var request = ARequestIn(status);
+        var resolvedDate = request.ResolvedDate;
+
+        Assert.Throws<InvalidOperationException>(() => request.MarkFailed("The cost changed.", Later()));
+
+        Assert.Equal(status, request.RequestStatus);
+        Assert.Equal(resolvedDate, request.ResolvedDate);
+    }
+
+    [Fact]
+    public void MarkAbandoned_refuses_a_request_pending_approval()
+    {
+        var request = ARequestIn(RequestStatus.PendingApproval);
+
+        Assert.Throws<InvalidOperationException>(() => request.MarkAbandoned("Dead-lettered.", Later()));
+
+        Assert.Equal(RequestStatus.PendingApproval, request.RequestStatus);
+        Assert.Null(request.ResolvedDate);
+    }
+
+    [Theory]
+    [InlineData(RequestStatus.Queued)]
+    [InlineData(RequestStatus.Approved)]
+    public void MarkAbandoned_abandons_a_request_still_in_flight(RequestStatus status)
+    {
+        var request = ARequestIn(status);
+
+        request.MarkAbandoned("Dead-lettered.", Later());
+
+        Assert.Equal(RequestStatus.Abandoned, request.RequestStatus);
+        Assert.Equal("Dead-lettered.", request.ResolutionReason);
+        Assert.Equal(Now.AddDays(1), request.ResolvedDate);
+    }
+
+    [Theory]
+    [MemberData(nameof(Finished))]
+    public void MarkAbandoned_on_a_finished_request_changes_nothing_and_checks_nothing(RequestStatus status)
+    {
+        var request = ARequestIn(status);
+        var reason = request.ResolutionReason;
+        var resolvedDate = request.ResolvedDate;
+
+        // A redelivered dead letter is a no-op, so even a blank reason and no clock are not refused.
+        request.MarkAbandoned("", null!);
+
+        Assert.Equal(status, request.RequestStatus);
+        Assert.Equal(reason, request.ResolutionReason);
+        Assert.Equal(resolvedDate, request.ResolvedDate);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
