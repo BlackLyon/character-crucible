@@ -1,4 +1,5 @@
-﻿using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
+﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 
@@ -8,7 +9,7 @@ public class CharacterXpTests
     [Fact]
     public void A_character_not_yet_in_play_cannot_be_granted_xp_and_keeps_its_balances()
     {
-        var character = PendingApproval();
+        var character = ACharacter().InStatus(CharacterStatus.PendingApproval).Build();
 
         Assert.Throws<InvalidOperationException>(() => character.GrantXp(Narrator, 5, "Session award", Clock()));
 
