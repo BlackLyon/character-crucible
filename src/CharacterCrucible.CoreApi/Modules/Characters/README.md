@@ -4,9 +4,13 @@ Characters, and how they change: creation and review, XP, and advancement reques
 to apply. Advancement lives here rather than in a module of its own. See
 [`Modules/README.md`](../README.md) for why.
 
-**State:** the domain is written and mapped to Postgres, with mapping tests against a real
-database. The guard tests of these methods come next. Builders and one worked example per method
-family are in `tests/CharacterCrucible.CoreApi.Tests`, under `Builders/` and `Domain/Characters/`.
+**State:** the domain is written, mapped to Postgres and tested. In
+`tests/CharacterCrucible.CoreApi.Tests`, the guard tests of its methods are under
+`Domain/Characters/`, and the builders they use are under `Builders/`. The ledger and audit rows are
+private to the character, so `Persistence/` checks them by reading them back from a real database.
+
+**Known gap:** a refusal test checks only the exception type, so it passes if any guard fires, not
+just the one it names. Settling that waits on the error-handling design in the next stage.
 
 ## The shape
 
