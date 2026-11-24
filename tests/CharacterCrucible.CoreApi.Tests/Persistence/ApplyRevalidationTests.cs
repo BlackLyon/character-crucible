@@ -7,8 +7,8 @@ using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 namespace CharacterCrucible.CoreApi.Tests.Persistence;
 
 /// <summary>
-/// Apply-time guards whose refused case no sequence of domain calls can reach: only stored state
-/// that changed after the request was accepted, or was written without going through the domain.
+/// Apply-time guards against stored state the request no longer matches: changed after the request
+/// was accepted, or written without going through the domain.
 /// </summary>
 public class ApplyRevalidationTests(PostgresFixture postgres) : IClassFixture<PostgresFixture>
 {
@@ -26,8 +26,8 @@ public class ApplyRevalidationTests(PostgresFixture postgres) : IClassFixture<Po
             await db.SaveChangesAsync(Ct);
         }
 
-        // Nothing in the domain lowers XP, so a stored change stands in for whatever did: a
-        // redelivered apply, a correction, a fix made in SQL.
+        // Stands in for XP lowered from outside after the request was accepted: a correction, a fix
+        // made in SQL. (Applying the same request twice also lands here, as ApplyAdvancement doesn't mark it applied.)
         await using (var db = postgres.NewContext())
         {
             await db.Characters.Where(c => c.Id == character.Id)

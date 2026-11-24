@@ -7,7 +7,8 @@ namespace CharacterCrucible.CoreApi.Tests.Builders;
 
 /// <summary>
 /// Builds a request for one character, priced under that character's own version by default, through
-/// the domain's factories and transitions. Immutable, like <see cref="CharacterBuilder"/>.
+/// the domain's factories and transitions. The builder itself is immutable, but with
+/// <see cref="Submitted"/> each <c>Build()</c> submits to the character, so build it once.
 /// </summary>
 internal sealed record AdvancementRequestBuilder
 {

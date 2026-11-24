@@ -1,4 +1,6 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
+using Microsoft.Extensions.Time.Testing;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
@@ -21,7 +23,7 @@ public class CharacterLifecycleTests
     }
 
     [Fact]
-    public void Only_a_character_in_pending_approval_can_be_approved()
+    public void Approving_a_pending_character_makes_it_active()
     {
         var character = ACharacter().InStatus(CharacterStatus.PendingApproval).Build();
 
@@ -44,13 +46,14 @@ public class CharacterLifecycleTests
     [Fact]
     public void Approval_dates_every_ability_with_the_approval_time()
     {
+        // A day after the character was created, so the creation date can't pass for the approval date.
+        var approvalTime = Now.AddDays(1);
         var draft = ADraft().WithAbilities("riposte", "parry").Build();
-
         var character = ACharacter().InStatus(CharacterStatus.PendingApproval).WithSheet(draft).Build();
 
-        character.Approve(Narrator, Clock());
+        character.Approve(Narrator, new FakeTimeProvider(approvalTime));
 
-        Assert.All(character.Abilities, ability => Assert.Equal(Now, ability.AcquiredDate));
+        Assert.Equal([new CharacterAbility("riposte", approvalTime), new CharacterAbility("parry", approvalTime)], character.Abilities);
     }
 
     [Fact]

@@ -185,30 +185,10 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
         Assert.Equal(2, await db.Set<AdvancementRequest>().CountAsync(r => r.CharacterId == id, Ct));
     }
 
-    /// <summary>Saves an active character, then applies a saved request to it as the worker will.</summary>
-    private async Task<(Guid CharacterId, Guid RequestId)> SaveAppliedAsync()
-    {
-        var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).WithXp(10).Build();
-        var request = ATraitRequest(character).WithCost(4).Build();
-        character.SubmitRequest(request);
-        var id = await SaveAsync(character);
-        Assert.NotEqual(Guid.Empty, request.Id);
-
-        await using var db = postgres.NewContext();
-        var loaded = await db.Characters.WithInFlightRequests().SingleAsync(c => c.Id == id, Ct);
-        var loadedRequest = db.Set<AdvancementRequest>().Local.Single();
-        loaded.ApplyAdvancement(Worker, loadedRequest, EngineVersion, Clock());
-        loadedRequest.MarkApplied(Clock());
-        await db.SaveChangesAsync(Ct);
-
-        return (id, request.Id);
-    }
-
     [Fact]
     public async Task Applying_copies_the_saved_request_id_onto_the_ledger_and_audit_rows()
     {
-        var (id, requestId) = await SaveAppliedAsync();
+        var (id, requestId, _) = await AppliedCharacters.SaveAsync(postgres, EngineVersion, Ct);
 
         await using var db = postgres.NewContext();
         var spend = await db.Set<XpLedgerEntry>().SingleAsync(l => l.AdvancementRequestId == requestId, Ct);
@@ -243,7 +223,7 @@ public class CharacterPersistenceTests(PostgresFixture postgres) : IClassFixture
     [InlineData("fk_audit_entry_advancement_request_advancement_request_id")]
     public async Task A_copied_request_id_must_exist_and_its_request_cannot_be_deleted(string constraint)
     {
-        var (id, requestId) = await SaveAppliedAsync();
+        var (id, requestId, _) = await AppliedCharacters.SaveAsync(postgres, EngineVersion, Ct);
         var onLedger = constraint.StartsWith("fk_xp_ledger_entry", StringComparison.Ordinal);
 
         // Exists: pointing the row at no request is refused.

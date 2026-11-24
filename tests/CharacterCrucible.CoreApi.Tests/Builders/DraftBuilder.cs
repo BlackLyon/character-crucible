@@ -17,11 +17,11 @@ internal sealed record DraftBuilder
     /// <summary>Replaces the default traits.</summary>
     public DraftBuilder WithTraits(params CharacterTrait[] traits) => this with { Traits = [.. traits] };
 
-    /// <summary>Undated, as every ability in a draft must be.</summary>
+    /// <summary>Replaces the abilities with these, undated, as every ability in a draft must be.</summary>
     public DraftBuilder WithAbilities(params string[] keys) =>
         this with { Abilities = [.. keys.Select(key => new CharacterAbility(key, null))] };
 
-    /// <summary>A dated ability, which a draft refuses. Only for proving that it does.</summary>
+    /// <summary>Replaces the abilities with one dated ability, which a draft refuses. Only for proving that it does.</summary>
     public DraftBuilder WithDatedAbility(string key, DateTimeOffset acquiredDate) =>
         this with { Abilities = [new CharacterAbility(key, acquiredDate)] };
 

@@ -74,6 +74,7 @@ public class TestCharactersTests
         var character = ACharacter().InStatus(CharacterStatus.Active).Build();
 
         Assert.Throws<InvalidOperationException>(() => ACharacter().WithXp(10).Build());
+        Assert.Throws<InvalidOperationException>(() => ACharacter().InStatus(CharacterStatus.Active).WithXp(-3).Build());
         Assert.Throws<InvalidOperationException>(() => AnAbilityRequest(character).WithRating(2).Build());
         Assert.Throws<InvalidOperationException>(() =>
             ATraitRequest(character).Gated().InStatus(RequestStatus.Queued).Build());

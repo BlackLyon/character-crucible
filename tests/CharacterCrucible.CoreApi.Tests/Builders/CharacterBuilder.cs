@@ -30,6 +30,10 @@ internal sealed record CharacterBuilder
     {
         var reachedFromPlay = Status is CharacterStatus.Active or CharacterStatus.Banned
             or CharacterStatus.Dead or CharacterStatus.Retired;
+        if (Xp < 0)
+        {
+            throw new InvalidOperationException($"WithXp grants XP, so it can't be negative: {Xp}.");
+        }
         if (Xp > 0 && !reachedFromPlay)
         {
             throw new InvalidOperationException($"WithXp needs a status reached from play, not {Status}.");

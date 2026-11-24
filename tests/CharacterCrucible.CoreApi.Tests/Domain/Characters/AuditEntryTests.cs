@@ -29,6 +29,20 @@ public class AuditEntryTests
     }
 
     [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void An_action_that_ran_Rules_is_refused_with_a_blank_engine_version(string engineVersion)
+    {
+        var requestId = Guid.CreateVersion7();
+        var versionId = Guid.CreateVersion7();
+
+        var refused = Assert.Throws<ArgumentException>(() =>
+            new AuditEntry(Worker, AuditAction.AdvancementApplied, Change, Reason, requestId, versionId, engineVersion, Clock()));
+
+        Assert.Equal("engineVersion", refused.ParamName);
+    }
+
+    [Theory]
     [InlineData(AuditAction.CharacterApproved)]
     [InlineData(AuditAction.StatusChanged)]
     [InlineData(AuditAction.XpGranted)]

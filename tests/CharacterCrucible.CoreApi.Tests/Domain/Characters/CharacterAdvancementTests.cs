@@ -1,5 +1,6 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
+using CharacterCrucible.CoreApi.Tests.Builders;
 using Microsoft.Extensions.Time.Testing;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
@@ -10,8 +11,6 @@ public class CharacterAdvancementTests
 {
     public static TheoryData<RequestStatus> NotSubmittable =>
         StatusesExcept(RequestStatus.Queued, RequestStatus.PendingApproval);
-    public static TheoryData<RequestStatus> NotAppliable =>
-        StatusesExcept(RequestStatus.Queued, RequestStatus.Approved);
 
     [Fact]
     public void A_character_awaiting_review_cannot_submit_a_request()
@@ -23,17 +22,6 @@ public class CharacterAdvancementTests
 
         // Null, not merely unchanged: it has never been set, so any write would show.
         Assert.Null(character.LastRequestSubmittedAt);
-    }
-
-    [Fact]
-    public void Submitting_a_request_records_when_it_was_submitted()
-    {
-        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
-        var request = ATraitRequest(character).Build();
-
-        character.SubmitRequest(request);
-
-        Assert.Equal(Now, character.LastRequestSubmittedAt);
     }
 
     [Theory]
@@ -107,12 +95,11 @@ public class CharacterAdvancementTests
         Assert.Equal(Now, character.LastRequestSubmittedAt);
     }
 
-    [Theory]
-    [InlineData(2, 3)]
-    public void SubmitRequest_refuses_a_request_the_character_cannot_afford(int unspentXp, int requestCost)
+    [Fact]
+    public void SubmitRequest_refuses_a_request_the_character_cannot_afford()
     {
-        var character = ACharacter().InStatus(CharacterStatus.Active).WithXp(unspentXp).Build();
-        var request = ATraitRequest(character).WithCost(requestCost).Build();
+        var character = ACharacter().InStatus(CharacterStatus.Active).WithXp(2).Build();
+        var request = ATraitRequest(character).WithCost(3).Build();
 
         Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(request));
 
@@ -124,7 +111,7 @@ public class CharacterAdvancementTests
     {
         var later = Now.AddHours(1);
         var character = ACharacter().InStatus(CharacterStatus.Active).Build();
-        _ = ATraitRequest(character).WithKey("wits").Submitted().Build(); // in flight request
+        var inFlight = ATraitRequest(character).WithKey("wits").Submitted().Build();
         var newRequest = ATraitRequest(character).WithKey("resolve").WithSubmittedDate(later).Build();
 
         character.SubmitRequest(newRequest);
@@ -140,8 +127,8 @@ public class CharacterAdvancementTests
     {
         var later = Now.AddHours(1);
         var character = ACharacter().InStatus(CharacterStatus.Active).Build();
-        _ = ATraitRequest(character).WithKey("wits").Gated().Submitted().Build(); // 1st in flight request
-        _ = ATraitRequest(character).WithKey("resolve").InStatus(inFlightStatus).Submitted().Build(); // 2nd in flight request
+        var first = ATraitRequest(character).WithKey("wits").Gated().Submitted().Build();
+        var second = ATraitRequest(character).WithKey("resolve").InStatus(inFlightStatus).Submitted().Build();
         var newRequest = ATraitRequest(character).WithKey("composure").WithSubmittedDate(later).Build();
 
         Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(newRequest));
@@ -154,10 +141,10 @@ public class CharacterAdvancementTests
     {
         var later = Now.AddHours(1);
         var character = ACharacter().InStatus(CharacterStatus.Active).Build();
-        _ = ATraitRequest(character).WithKey("resolve").Submitted().Build(); // in flight request
-        var newRequest = AnAbilityRequest(character).WithKey("resolve").WithSubmittedDate(later).Build(); // same key, different kind
+        var inFlightTrait = ATraitRequest(character).WithKey("resolve").Submitted().Build();
+        var newAbility = AnAbilityRequest(character).WithKey("resolve").WithSubmittedDate(later).Build();
 
-        character.SubmitRequest(newRequest);
+        character.SubmitRequest(newAbility);
 
         Assert.Equal(later, character.LastRequestSubmittedAt);
     }
@@ -167,10 +154,10 @@ public class CharacterAdvancementTests
     {
         var later = Now.AddHours(1);
         var character = ACharacter().InStatus(CharacterStatus.Active).Build();
-        _ = AnAbilityRequest(character).Submitted().Build(); // in flight request
-        var newRequest = AnAbilityRequest(character).WithSubmittedDate(later).Build(); // duplicate
+        var inFlight = AnAbilityRequest(character).Submitted().Build();
+        var duplicate = AnAbilityRequest(character).WithSubmittedDate(later).Build();
 
-        Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(newRequest));
+        Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(duplicate));
 
         Assert.Equal(Now, character.LastRequestSubmittedAt);
     }
@@ -180,8 +167,8 @@ public class CharacterAdvancementTests
     {
         var later = Now.AddHours(1);
         var character = ACharacter().InStatus(CharacterStatus.Active).WithXp(5).Build();
-        _ = ATraitRequest(character).WithCost(3).WithKey("composure").Submitted().Build(); // in flight request
-        var newRequest = ATraitRequest(character).WithCost(2).WithKey("resolve").WithSubmittedDate(later).Build(); // new request
+        var inFlight = ATraitRequest(character).WithCost(3).WithKey("composure").Submitted().Build();
+        var newRequest = ATraitRequest(character).WithCost(2).WithKey("resolve").WithSubmittedDate(later).Build();
 
         character.SubmitRequest(newRequest);
 
@@ -193,12 +180,55 @@ public class CharacterAdvancementTests
     {
         var later = Now.AddHours(1);
         var character = ACharacter().InStatus(CharacterStatus.Active).WithXp(5).Build();
-        _ = ATraitRequest(character).WithCost(3).WithKey("composure").Submitted().Build(); // in flight request
-        var newRequest = ATraitRequest(character).WithCost(3).WithKey("resolve").WithSubmittedDate(later).Build(); // new request
+        var inFlight = ATraitRequest(character).WithCost(3).WithKey("composure").Submitted().Build();
+        var newRequest = ATraitRequest(character).WithCost(3).WithKey("resolve").WithSubmittedDate(later).Build();
 
         Assert.Throws<InvalidOperationException>(() => character.SubmitRequest(newRequest));
 
         Assert.Equal(Now, character.LastRequestSubmittedAt);
+    }
+
+    [Theory]
+    [MemberData(nameof(Finished), MemberType = typeof(TestCharacters))]
+    public void SubmitRequest_does_not_count_a_finished_request_toward_the_limit(RequestStatus finishedStatus)
+    {
+        var later = Now.AddHours(1);
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+        var finished = ATraitRequest(character).WithKey("wits").InStatus(finishedStatus).Submitted().Build();
+        var inFlight = ATraitRequest(character).WithKey("resolve").Submitted().Build();
+        var newRequest = ATraitRequest(character).WithKey("composure").WithSubmittedDate(later).Build();
+
+        character.SubmitRequest(newRequest);
+
+        Assert.Equal(later, character.LastRequestSubmittedAt);
+    }
+
+    [Theory]
+    [MemberData(nameof(Finished), MemberType = typeof(TestCharacters))]
+    public void SubmitRequest_accepts_a_request_for_the_same_target_as_a_finished_one(RequestStatus finishedStatus)
+    {
+        var later = Now.AddHours(1);
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+        var finished = ATraitRequest(character).InStatus(finishedStatus).Submitted().Build();
+        var sameTarget = ATraitRequest(character).WithSubmittedDate(later).Build();
+
+        character.SubmitRequest(sameTarget);
+
+        Assert.Equal(later, character.LastRequestSubmittedAt);
+    }
+
+    [Theory]
+    [MemberData(nameof(Finished), MemberType = typeof(TestCharacters))]
+    public void SubmitRequest_does_not_hold_back_xp_for_a_finished_request(RequestStatus finishedStatus)
+    {
+        var later = Now.AddHours(1);
+        var character = ACharacter().InStatus(CharacterStatus.Active).WithXp(5).Build();
+        var finished = ATraitRequest(character).WithKey("wits").WithCost(3).InStatus(finishedStatus).Submitted().Build();
+        var newRequest = ATraitRequest(character).WithKey("resolve").WithCost(3).WithSubmittedDate(later).Build();
+
+        character.SubmitRequest(newRequest);
+
+        Assert.Equal(later, character.LastRequestSubmittedAt);
     }
 
     [Theory]
@@ -233,7 +263,7 @@ public class CharacterAdvancementTests
     }
 
     [Theory]
-    [MemberData(nameof(NotAppliable))]
+    [MemberData(nameof(NotAppliable), MemberType = typeof(TestCharacters))]
     public void ApplyAdvancement_refuses_a_request_not_in_queued_or_approved_status(RequestStatus status)
     {
         var sheet = ADraft().WithTraits(new CharacterTrait("strength", 2)).WithAbilities("fireball").Build();
@@ -278,18 +308,18 @@ public class CharacterAdvancementTests
         Assert.Equal(expectedTraits, character.Traits.ToList());
     }
 
-    [Fact]
-    public void ApplyAdvancement_refuses_to_apply_a_request_for_a_trait_with_a_lower_or_equal_rating()
+    [Theory]
+    [InlineData(1)] // lower than the held 2
+    [InlineData(2)] // equal to it
+    public void ApplyAdvancement_refuses_to_apply_a_request_for_a_trait_with_a_lower_or_equal_rating(int targetRating)
     {
         var sheet = ADraft().WithTraits(new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)).Build();
         var character = ACharacter().WithSheet(sheet).InStatus(CharacterStatus.Active).WithXp(10).Build();
-        var request = ATraitRequest(character).WithKey("strength").WithRating(1).WithCost(3).InStatus(RequestStatus.Queued).Submitted().Build();
-        var secondRequest = ATraitRequest(character).WithKey("swordsmanship").WithRating(1).WithCost(3).InStatus(RequestStatus.Queued).Submitted().Build();
+        var request = ATraitRequest(character).WithKey("strength").WithRating(targetRating).WithCost(3).InStatus(RequestStatus.Queued).Submitted().Build();
         var traitsBefore = character.Traits.ToList();
         var unspentXpBefore = character.UnspentXp;
 
         Assert.Throws<InvalidOperationException>(() => character.ApplyAdvancement(Worker, request, EngineVersion, Clock()));
-        Assert.Throws<InvalidOperationException>(() => character.ApplyAdvancement(Worker, secondRequest, EngineVersion, Clock()));
 
         Assert.Equal(traitsBefore, character.Traits.ToList());
         Assert.Equal(unspentXpBefore, character.UnspentXp);

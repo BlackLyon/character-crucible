@@ -1,5 +1,6 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
+using CharacterCrucible.CoreApi.Tests.Builders;
 using Microsoft.Extensions.Time.Testing;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
@@ -9,12 +10,9 @@ namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
 public class AdvancementRequestTests
 {
     public static TheoryData<RequestStatus> NotPendingApproval => StatusesExcept(RequestStatus.PendingApproval);
-    public static TheoryData<RequestStatus> NotQueuedOrApproved => StatusesExcept(RequestStatus.Queued, RequestStatus.Approved);
-    public static TheoryData<RequestStatus> Finished =>
-        StatusesExcept(RequestStatus.Queued, RequestStatus.PendingApproval, RequestStatus.Approved);
-
     // A day after the builder's clock, so a transition that wrongly went through would leave a new date.
-    private static FakeTimeProvider Later() => new(Now.AddDays(1));
+    private static readonly DateTimeOffset LaterTime = Now.AddDays(1);
+    private static FakeTimeProvider Later() => new(LaterTime);
 
     private static AdvancementRequest ARequestIn(RequestStatus status)
     {
@@ -49,7 +47,7 @@ public class AdvancementRequestTests
     }
 
     [Theory]
-    [MemberData(nameof(NotQueuedOrApproved))]
+    [MemberData(nameof(NotAppliable), MemberType = typeof(TestCharacters))]
     public void MarkApplied_refuses_a_request_not_queued_or_approved(RequestStatus status)
     {
         var request = ARequestIn(status);
@@ -62,7 +60,7 @@ public class AdvancementRequestTests
     }
 
     [Theory]
-    [MemberData(nameof(NotQueuedOrApproved))]
+    [MemberData(nameof(NotAppliable), MemberType = typeof(TestCharacters))]
     public void MarkFailed_refuses_a_request_not_queued_or_approved(RequestStatus status)
     {
         var request = ARequestIn(status);
@@ -96,11 +94,11 @@ public class AdvancementRequestTests
 
         Assert.Equal(RequestStatus.Abandoned, request.RequestStatus);
         Assert.Equal("Dead-lettered.", request.ResolutionReason);
-        Assert.Equal(Now.AddDays(1), request.ResolvedDate);
+        Assert.Equal(LaterTime, request.ResolvedDate);
     }
 
     [Theory]
-    [MemberData(nameof(Finished))]
+    [MemberData(nameof(Finished), MemberType = typeof(TestCharacters))]
     public void MarkAbandoned_on_a_finished_request_changes_nothing_and_checks_nothing(RequestStatus status)
     {
         var request = ARequestIn(status);
@@ -136,7 +134,13 @@ public class AdvancementRequestTests
 
         var request = AdvancementRequest.ForAbility(Player.Id, Clock(), "riposte", 4, versionId, EngineVersion, requiresApproval: false);
 
-        Assert.Equal((TargetKind.Ability, "riposte", null), (request.TargetKind, request.TargetKey, request.TargetRating));
+        Assert.Equal(TargetKind.Ability, request.TargetKind);
+        Assert.Equal("riposte", request.TargetKey);
+        Assert.Null(request.TargetRating);
+        Assert.Equal(4, request.QuotedCost);
+        Assert.Equal(versionId, request.EvaluatedRulesetVersionId);
+        Assert.Equal(EngineVersion, request.EvaluatedEngineVersion);
+        Assert.Equal(RequestStatus.Queued, request.RequestStatus);
     }
 
     [Fact]
@@ -146,6 +150,19 @@ public class AdvancementRequestTests
         var request = ATraitRequest(character).Gated().Build();
 
         var refused = Assert.Throws<ArgumentOutOfRangeException>(() => request.Approve(Guid.Empty, Clock()));
+
+        Assert.Equal("reviewer", refused.ParamName);
+        Assert.Equal(RequestStatus.PendingApproval, request.RequestStatus);
+        Assert.Null(request.ReviewedBy);
+    }
+
+    [Fact]
+    public void A_request_cannot_be_rejected_without_a_reviewer_and_stays_pending()
+    {
+        var character = ACharacter().InStatus(CharacterStatus.Active).Build();
+        var request = ATraitRequest(character).Gated().Build();
+
+        var refused = Assert.Throws<ArgumentOutOfRangeException>(() => request.Reject(Guid.Empty, "Not this session.", Clock()));
 
         Assert.Equal("reviewer", refused.ParamName);
         Assert.Equal(RequestStatus.PendingApproval, request.RequestStatus);

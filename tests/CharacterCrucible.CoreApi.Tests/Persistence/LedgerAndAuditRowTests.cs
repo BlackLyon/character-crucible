@@ -1,7 +1,6 @@
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Entities;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
-using CharacterCrucible.CoreApi.Modules.Characters.Persistence;
 using Microsoft.EntityFrameworkCore;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
@@ -18,35 +17,10 @@ public class LedgerAndAuditRowTests(PostgresFixture postgres) : IClassFixture<Po
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    /// <summary>A character that earned 10 XP and spent 4 raising strength from 2 to 3, saved.</summary>
-    private async Task<(Guid CharacterId, Guid RequestId)> SaveAppliedAsync()
-    {
-        var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
-        var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).WithXp(10).Build();
-        var request = ATraitRequest(character).WithKey("strength").WithRating(3).WithCost(4).Submitted().Build();
-        await using (var db = postgres.NewContext())
-        {
-            db.Characters.Add(character);
-            await db.SaveChangesAsync(Ct);
-        }
-
-        // Applied in a second context, once the request has the id the rows copy.
-        await using (var db = postgres.NewContext())
-        {
-            var loaded = await db.Characters.WithInFlightRequests().SingleAsync(c => c.Id == character.Id, Ct);
-            var loadedRequest = db.Set<AdvancementRequest>().Local.Single();
-            loaded.ApplyAdvancement(Worker, loadedRequest, ApplyEngineVersion, Clock());
-            loadedRequest.MarkApplied(Clock());
-            await db.SaveChangesAsync(Ct);
-        }
-
-        return (character.Id, request.Id);
-    }
-
     [Fact]
     public async Task Applying_writes_a_ledger_entry_for_the_cost_with_the_new_balance()
     {
-        var (_, requestId) = await SaveAppliedAsync();
+        var (_, requestId, _) = await AppliedCharacters.SaveAsync(postgres, ApplyEngineVersion, Ct);
 
         await using var db = postgres.NewContext();
         var spend = await db.Set<XpLedgerEntry>().SingleAsync(l => l.AdvancementRequestId == requestId, Ct);
@@ -59,13 +33,14 @@ public class LedgerAndAuditRowTests(PostgresFixture postgres) : IClassFixture<Po
     [Fact]
     public async Task Applying_writes_an_audit_row_with_the_request_and_the_apply_time_engine_version()
     {
-        var (_, requestId) = await SaveAppliedAsync();
+        var (_, requestId, versionId) = await AppliedCharacters.SaveAsync(postgres, ApplyEngineVersion, Ct);
 
         await using var db = postgres.NewContext();
         var audit = await db.Set<AuditEntry>().SingleAsync(a => a.AdvancementRequestId == requestId, Ct);
 
         Assert.Equal(AuditAction.AdvancementApplied, audit.Action);
         Assert.Equal(Worker, new Actor(audit.ActorId, audit.ActorRole));
+        Assert.Equal(versionId, audit.RulesetVersionId);
         Assert.Equal(ApplyEngineVersion, audit.EngineVersion);
         Assert.Equal(new ChangeEntry("trait.strength", "Trait", "2", "3"), Assert.Single(audit.Change.Changes));
     }
@@ -74,7 +49,7 @@ public class LedgerAndAuditRowTests(PostgresFixture postgres) : IClassFixture<Po
     public async Task Granting_xp_writes_a_ledger_entry_and_an_audit_row_with_the_new_totals()
     {
         // After the spend, total and unspent differ (10 and 6), so a swapped pair can't pass.
-        var (id, _) = await SaveAppliedAsync();
+        var (id, _, _) = await AppliedCharacters.SaveAsync(postgres, ApplyEngineVersion, Ct);
         await using (var db = postgres.NewContext())
         {
             var loaded = await db.Characters.SingleAsync(c => c.Id == id, Ct);

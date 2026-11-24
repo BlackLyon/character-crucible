@@ -38,4 +38,11 @@ internal static class TestCharacters
     /// <summary>Every status except <paramref name="allowed"/>, for a theory that each one is refused. Character or request statuses.</summary>
     public static TheoryData<TStatus> StatusesExcept<TStatus>(params TStatus[] allowed) where TStatus : struct, Enum =>
         new(Enum.GetValues<TStatus>().Except(allowed));
+
+    /// <summary>Request statuses a request can't be applied, marked applied or marked failed from.</summary>
+    public static TheoryData<RequestStatus> NotAppliable => StatusesExcept(RequestStatus.Queued, RequestStatus.Approved);
+
+    /// <summary>Request statuses that are no longer in flight.</summary>
+    public static TheoryData<RequestStatus> Finished =>
+        StatusesExcept(RequestStatus.Queued, RequestStatus.PendingApproval, RequestStatus.Approved);
 }
