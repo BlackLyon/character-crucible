@@ -250,4 +250,62 @@ public class CharacterAdvancementTests
         Assert.Equal(unspentXpBefore, character.UnspentXp);
         Assert.Equal(totalXpBefore, character.TotalEarnedXp);
     }
+
+    [Fact]
+    public void ApplyAdvancement_adds_a_new_trait_to_the_character()
+    {
+        var expectedTraits = new List<CharacterTrait> { new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1), new CharacterTrait("agility", 3) };
+        var sheet = ADraft().WithTraits(new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)).Build();
+        var character = ACharacter().WithSheet(sheet).InStatus(CharacterStatus.Active).WithXp(5).Build();
+        var request = ATraitRequest(character).WithKey("agility").WithRating(3).WithCost(3).InStatus(RequestStatus.Queued).Submitted().Build();
+
+        character.ApplyAdvancement(Worker, request, EngineVersion, Clock());
+
+        Assert.Equal(expectedTraits, character.Traits.ToList());
+    }
+
+    [Fact]
+    public void ApplyAdvancement_updates_an_existing_trait_on_the_character()
+    {
+        var expectedTraits = new List<CharacterTrait> { new CharacterTrait("strength", 3), new CharacterTrait("swordsmanship", 1) };
+        var sheet = ADraft().WithTraits(new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)).Build();
+        var character = ACharacter().WithSheet(sheet).InStatus(CharacterStatus.Active).WithXp(5).Build();
+        var request = ATraitRequest(character).WithKey("strength").WithRating(3).WithCost(3).InStatus(RequestStatus.Queued).Submitted().Build();
+
+        character.ApplyAdvancement(Worker, request, EngineVersion, Clock());
+
+        Assert.Equal(expectedTraits, character.Traits.ToList());
+    }
+
+    [Fact]
+    public void ApplyAdvancement_refuses_to_apply_a_request_for_a_trait_with_a_lower_or_equal_rating()
+    {
+        var sheet = ADraft().WithTraits(new CharacterTrait("strength", 2), new CharacterTrait("swordsmanship", 1)).Build();
+        var character = ACharacter().WithSheet(sheet).InStatus(CharacterStatus.Active).WithXp(10).Build();
+        var request = ATraitRequest(character).WithKey("strength").WithRating(1).WithCost(3).InStatus(RequestStatus.Queued).Submitted().Build();
+        var secondRequest = ATraitRequest(character).WithKey("swordsmanship").WithRating(1).WithCost(3).InStatus(RequestStatus.Queued).Submitted().Build();
+        var traitsBefore = character.Traits.ToList();
+        var unspentXpBefore = character.UnspentXp;
+
+        Assert.Throws<InvalidOperationException>(() => character.ApplyAdvancement(Worker, request, EngineVersion, Clock()));
+        Assert.Throws<InvalidOperationException>(() => character.ApplyAdvancement(Worker, secondRequest, EngineVersion, Clock()));
+
+        Assert.Equal(traitsBefore, character.Traits.ToList());
+        Assert.Equal(unspentXpBefore, character.UnspentXp);
+    }
+
+    [Fact]
+    public void ApplyAdvancement_refuses_to_apply_a_request_for_an_ability_the_character_already_has()
+    {
+        var sheet = ADraft().WithAbilities("riposte").Build();
+        var character = ACharacter().WithSheet(sheet).InStatus(CharacterStatus.Active).WithXp(10).Build();
+        var request = AnAbilityRequest(character).WithCost(3).InStatus(RequestStatus.Queued).Submitted().Build();
+        var abilitiesBefore = character.Abilities.ToList();
+        var unspentXpBefore = character.UnspentXp;
+
+        Assert.Throws<InvalidOperationException>(() => character.ApplyAdvancement(Worker, request, EngineVersion, Clock()));
+
+        Assert.Equal(abilitiesBefore, character.Abilities.ToList());
+        Assert.Equal(unspentXpBefore, character.UnspentXp);
+    }
 }
