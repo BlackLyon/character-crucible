@@ -139,6 +139,11 @@ Recorded so none of these reads as an oversight:
   that Postgres no longer rejects a non-JSON snapshot at write time, and nothing else does either.
 - **Two bands may share a `MinimumScore`**, and nothing orders them. Deferred to authoring.
 
+**Not yet tested:** the domain's own guards, which are publishing once, editing only a draft, one
+open draft per ruleset, and only an owned, published version becoming current. The database
+indexes behind the draft and version rules are tested. The guards themselves have no unit tests.
+That matters most for invariant 4, which has nothing else behind it.
+
 ## `PublicationRecord` and the content hash
 
 The publish stamp is one value object of **seven** fields rather than seven nullable columns, so

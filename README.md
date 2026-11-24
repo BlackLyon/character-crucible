@@ -22,12 +22,14 @@ The project is being built in stages, domain first. Nothing runs end to end yet.
 
 - **`Rulesets`:** written, mapped to Postgres with EF Core, and covered by Testcontainers
   persistence tests. Those include the database-level invariants and publishing an immutable
-  version, which takes two saves. See
+  version, which takes two saves. Its domain rules, such as publishing only once and editing only
+  a draft, have no unit tests of their own yet. See
   [its README](src/CharacterCrucible.CoreApi/Modules/Rulesets/README.md).
 - **`Characters`:** the domain is written. That covers characters, their review and play status, XP
   with a ledger and an audit trail, and advancement requests from submission to apply. It's mapped
-  to Postgres and covered by Testcontainers mapping tests. Guard tests cover its methods, and each
-  was checked by breaking the code it covers and seeing the test fail. See
+  to Postgres and covered by Testcontainers mapping tests. Guard tests cover most of its methods, and
+  each was checked by breaking the code it covers and seeing the test fail. A few refusals, such
+  as `GrantXp`'s amount and reason checks, are still untested. See
   [its README](src/CharacterCrucible.CoreApi/Modules/Characters/README.md).
 - **EF probes:** a test project that pins down how EF Core and Npgsql behave, the facts the
   persistence design depends on, before the real configuration relies on them. See
@@ -192,6 +194,8 @@ development. The Core API also has `/health/ready`, which checks the database is
 Worker has no HTTP surface.
 
 ## Layout
+
+What each project is for. What runs today is under [What exists today](#what-exists-today).
 
 ```
 src/

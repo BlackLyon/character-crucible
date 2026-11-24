@@ -51,7 +51,8 @@ public class ApplyRevalidationTests(PostgresFixture postgres) : IClassFixture<Po
     {
         var versionId = await PublishedVersions.SaveAsync(postgres, Ct);
         var character = ACharacter().InStatus(CharacterStatus.Active).OnVersion(versionId).WithXp(5).Build();
-        // A trait the sheet doesn't hold: for a held one, the rating comparison would refuse it anyway.
+        // A trait the sheet doesn't hold. For a held one, the rating comparison would still refuse a
+        // missing rating that had defaulted to 0, which would hide a weakened null check.
         var request = ATraitRequest(character).WithKey("agility").WithCost(3).Submitted().Build();
         await using (var db = postgres.NewContext())
         {

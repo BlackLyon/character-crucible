@@ -50,7 +50,8 @@ public class RulesetVersionConfiguration : IEntityTypeConfiguration<RulesetVersi
             // {"traits":[]} comes back as {"traits": []} -- one space, different hash,
             // and the integrity check could never pass. jsonb also reorders keys and
             // DISCARDS duplicates, which is data loss in a supposedly frozen snapshot.
-            // Validating the content is JSON belongs in Publish, not the column type.
+            // Nothing checks yet that the content is JSON. When something does, it belongs in
+            // Publish, not the column type.
             publication.Property(p => p.PublishedContent).HasColumnType("text");
             publication.Property(p => p.ContentHash).HasMaxLength(FieldLengths.ContentHash);
             publication.Property(p => p.RulesetName).HasMaxLength(FieldLengths.Name);

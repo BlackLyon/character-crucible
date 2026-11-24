@@ -9,8 +9,11 @@ to apply. Advancement lives here rather than in a module of its own. See
 `Domain/Characters/`, and the builders they use are under `Builders/`. The ledger and audit rows are
 private to the character, so `Persistence/` checks them by reading them back from a real database.
 
-**Known gap:** a refusal test checks only the exception type, so it passes if any guard fires, not
-just the one it names. Settling that waits on the error-handling design in the next stage.
+**Known gaps:**
+- A refusal test checks only the exception type, so it passes if any guard fires, not just the one
+  it names. Settling that waits on the error-handling design in the next stage.
+- A few refusals have no test yet: `UnbanDraft`, `GrantXp`'s amount and reason, and the status
+  checks on `UpdateDraft`, `SubmitForApproval`, `BanDraft` and `RemoveFromPlay`.
 
 ## The shape
 
