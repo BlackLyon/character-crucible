@@ -1,5 +1,6 @@
 ﻿using CharacterCrucible.CoreApi.Modules.Characters.Domain.Enums;
 using CharacterCrucible.CoreApi.Modules.Characters.Domain.ValueObjects;
+using Microsoft.Extensions.Time.Testing;
 using static CharacterCrucible.CoreApi.Tests.Builders.TestCharacters;
 
 namespace CharacterCrucible.CoreApi.Tests.Domain.Characters;
@@ -307,5 +308,22 @@ public class CharacterAdvancementTests
 
         Assert.Equal(abilitiesBefore, character.Abilities.ToList());
         Assert.Equal(unspentXpBefore, character.UnspentXp);
+    }
+
+    [Fact]
+    public void ApplyAdvancement_adds_an_ability_dated_when_it_was_applied_and_leaves_total_xp_alone()
+    {
+        var applyTime = Now.AddDays(1);
+        var sheet = ADraft().WithAbilities("parry").Build();
+        var character = ACharacter().WithSheet(sheet).InStatus(CharacterStatus.Active).WithXp(5).Build();
+        var request = AnAbilityRequest(character).WithKey("riposte").WithCost(3).Submitted().Build();
+        var totalXpBefore = character.TotalEarnedXp;
+
+        character.ApplyAdvancement(Worker, request, EngineVersion, new FakeTimeProvider(applyTime));
+
+        // Parry was dated at approval; riposte at apply time, not when the request was submitted.
+        Assert.Equal([new CharacterAbility("parry", Now), new CharacterAbility("riposte", applyTime)], character.Abilities);
+        Assert.Equal(2, character.UnspentXp);
+        Assert.Equal(totalXpBefore, character.TotalEarnedXp);
     }
 }
